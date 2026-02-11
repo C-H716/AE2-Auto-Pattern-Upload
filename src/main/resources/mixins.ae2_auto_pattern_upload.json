@@ -5,11 +5,16 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "mixins.ae2_auto_pattern_upload.refmap.json",
   "mixins": [
+    "AEBaseContainerAccessor",
+    "ContainerMEMonitorableAccessor",
+    "ContainerWirelessCraftingTerminalAccessor",
+    "ContainerPatternTermMixin",
+    "ContainerPatternTermExMixin"
   ],
   "client": [
-    "nei.MixinRecipeHandlerRef",
+    "GuiContainerAccessor",
     "nei.MixinDefaultOverlayHandler",
-    "GuiContainerAccessor"
+    "nei.MixinRecipeHandlerRef"
   ],
   "server": [
   ],
