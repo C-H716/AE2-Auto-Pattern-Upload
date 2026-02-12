@@ -1,5 +1,13 @@
 package com.gali.ae2_auto_pattern_upload.network;
 
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.inventory.Container;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.common.util.ForgeDirection;
+
+import com.gali.ae2_auto_pattern_upload.MyMod;
+import com.gali.ae2_auto_pattern_upload.util.AEUtil;
+
 import appeng.api.config.Actionable;
 import appeng.api.config.SecurityPermissions;
 import appeng.api.networking.IGrid;
@@ -9,20 +17,13 @@ import appeng.api.networking.storage.IStorageGrid;
 import appeng.api.storage.IMEMonitor;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.container.AEBaseContainer;
-import appeng.container.implementations.ContainerCraftAmount;
 import appeng.util.InventoryAdaptor;
 import appeng.util.item.AEItemStack;
-import com.gali.ae2_auto_pattern_upload.MyMod;
-import com.gali.ae2_auto_pattern_upload.util.AEUtil;
 import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.inventory.Container;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.common.util.ForgeDirection;
 
 /**
  * 处理 Shift + 左键点击的物品拉取/下单请求
@@ -159,8 +160,8 @@ public class PacketExtractItem implements IMessage {
                 }
 
                 // 执行提取
-                IAEItemStack extracted = itemInventory.extractItems(toExtract, Actionable.MODULATE,
-                    new PlayerSource(player, actionHost));
+                IAEItemStack extracted = itemInventory
+                    .extractItems(toExtract, Actionable.MODULATE, new PlayerSource(player, actionHost));
 
                 if (extracted != null && extracted.getStackSize() > 0) {
                     // 添加到玩家背包
@@ -169,8 +170,7 @@ public class PacketExtractItem implements IMessage {
                     // 如果有剩余，尝试返还到网络
                     if (added != null) {
                         IAEItemStack remainder = AEItemStack.create(added);
-                        itemInventory.injectItems(remainder, Actionable.MODULATE,
-                            new PlayerSource(player, actionHost));
+                        itemInventory.injectItems(remainder, Actionable.MODULATE, new PlayerSource(player, actionHost));
                     }
                 }
 

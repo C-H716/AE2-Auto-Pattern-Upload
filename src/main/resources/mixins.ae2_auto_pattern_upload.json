@@ -7,11 +7,12 @@
   "mixins": [
     "AEBaseContainerAccessor",
     "ContainerMEMonitorableAccessor",
-    "ContainerWirelessCraftingTerminalAccessor",
+    "ContainerPatternTermExMixin",
     "ContainerPatternTermMixin",
-    "ContainerPatternTermExMixin"
+    "ContainerWirelessCraftingTerminalAccessor"
   ],
   "client": [
+    "AEBaseGuiMixin",
     "GuiContainerAccessor",
     "nei.MixinDefaultOverlayHandler",
     "nei.MixinRecipeHandlerRef"

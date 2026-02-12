@@ -43,5 +43,19 @@ public final class ModNetwork {
             PacketOpenCraftingAmount.class,
             discriminator++,
             Side.SERVER);
+
+        // 注册配方材料提取数据包
+        INSTANCE.registerMessage(
+            PacketExtractIngredients.Handler.class,
+            PacketExtractIngredients.class,
+            discriminator++,
+            Side.SERVER);
+
+        // 注册滚轮存取物品数据包
+        INSTANCE.registerMessage(
+            PacketScrollTransfer.Handler.class,
+            PacketScrollTransfer.class,
+            discriminator++,
+            Side.SERVER);
     }
 }

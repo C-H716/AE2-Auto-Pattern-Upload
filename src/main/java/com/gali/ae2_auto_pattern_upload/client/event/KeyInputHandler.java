@@ -2,6 +2,8 @@ package com.gali.ae2_auto_pattern_upload.client.event;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.gui.inventory.GuiContainer;
@@ -9,11 +11,17 @@ import net.minecraft.item.ItemStack;
 
 import org.lwjgl.input.Keyboard;
 
+import com.gali.ae2_auto_pattern_upload.mixin.GuiContainerAccessor;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
+import com.gali.ae2_auto_pattern_upload.network.PacketExtractIngredients;
 import com.gali.ae2_auto_pattern_upload.network.PacketExtractItem;
 import com.gali.ae2_auto_pattern_upload.network.PacketOpenCraftingAmount;
+import com.gali.ae2_auto_pattern_upload.network.PacketScrollTransfer;
 
 import codechicken.nei.ItemPanels;
+import codechicken.nei.bookmark.BookmarkGrid;
+import codechicken.nei.bookmark.BookmarkItem;
+import codechicken.nei.bookmark.BookmarksGridSlot;
 import codechicken.nei.guihook.GuiContainerManager;
 import codechicken.nei.guihook.IContainerInputHandler;
 
@@ -75,7 +83,12 @@ public class KeyInputHandler implements IContainerInputHandler {
 
     @Override
     public boolean mouseClicked(GuiContainer gui, int mousex, int mousey, int button) {
-        // 检查鼠标是否在NEI面板（书签面板、物品面板、历史记录面板）上
+        // 检查鼠标是否在书签面板上 - 优先处理书签组点击
+        if (isMouseOverBookmarkPanel(mousex, mousey)) {
+            return handleBookmarkPanelClick(gui, mousex, mousey, button);
+        }
+
+        // 检查鼠标是否在NEI面板（物品面板、历史记录面板）上
         if (!isMouseOverNEIPanel(mousex, mousey)) {
             return false;
         }
@@ -97,6 +110,110 @@ public class KeyInputHandler implements IContainerInputHandler {
         return false;
     }
 
+    /**
+     * 检查鼠标是否在书签面板上
+     */
+    private boolean isMouseOverBookmarkPanel(int mousex, int mousey) {
+        try {
+            return ItemPanels.bookmarkPanel.contains(mousex, mousey);
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    /**
+     * 处理书签面板的点击事件
+     */
+    private boolean handleBookmarkPanelClick(GuiContainer gui, int mousex, int mousey, int button) {
+        // 获取鼠标下的书签槽位
+        BookmarksGridSlot slot = ItemPanels.bookmarkPanel.getSlotMouseOver(mousex, mousey);
+        if (slot == null) {
+            return false;
+        }
+
+        // 获取鼠标下的物品
+        ItemStack stackUnderMouse = GuiContainerManager.getStackMouseOver(gui);
+        if (stackUnderMouse == null) {
+            return false;
+        }
+
+        // Shift+左键点击书签组的主物品，提取组内材料
+        if (button == MOUSE_LEFT && isShiftKeyDown()) {
+            return handleBookmarkGroupShiftClick(slot, stackUnderMouse);
+        }
+
+        return false;
+    }
+
+    /**
+     * 处理Shift+左键点击书签组
+     * 如果点击的是主物品（RESULT类型），提取组内的所有材料
+     */
+    private boolean handleBookmarkGroupShiftClick(BookmarksGridSlot slot, ItemStack clickedStack) {
+        if (slot == null || clickedStack == null) {
+            return false;
+        }
+
+        try {
+            // 获取点击的物品类型
+            BookmarkItem.BookmarkItemType type = slot.getType();
+            int groupId = slot.getGroupId();
+
+            // 只有点击主物品（RESULT）时才提取材料
+            if (type != BookmarkItem.BookmarkItemType.RESULT) {
+                return false;
+            }
+
+            // 获取该组的所有材料
+            List<ItemStack> ingredients = getBookmarkGroupIngredients(groupId);
+            if (ingredients.isEmpty()) {
+                return false;
+            }
+
+            // 发送数据包到服务器提取材料
+            ModNetwork.INSTANCE.sendToServer(new PacketExtractIngredients(ingredients));
+            return true;
+
+        } catch (Throwable e) {
+            // 静默失败
+            return false;
+        }
+    }
+
+    /**
+     * 获取书签组内的所有材料（INGREDIENT类型）
+     */
+    private List<ItemStack> getBookmarkGroupIngredients(int groupId) {
+        List<ItemStack> ingredients = new ArrayList<>();
+
+        try {
+            BookmarkGrid grid = ItemPanels.bookmarkPanel.getGrid();
+
+            // 遍历所有书签项
+            for (int i = 0; i < grid.size(); i++) {
+                BookmarkItem item = grid.getBookmarkItem(i);
+
+                // 检查是否属于同一组
+                if (item.groupId != groupId) {
+                    continue;
+                }
+
+                // 只提取材料（INGREDIENT类型）
+                if (item.type == BookmarkItem.BookmarkItemType.INGREDIENT) {
+                    ItemStack stack = item.getItemStack();
+                    if (stack != null && stack.stackSize > 0) {
+                        ingredients.add(stack);
+                    }
+                }
+            }
+
+        } catch (Throwable e) {
+            // 静默失败
+        }
+
+        return ingredients;
+    }
+
     @Override
     public void onMouseClicked(GuiContainer gui, int mousex, int mousey, int button) {}
 
@@ -105,7 +222,68 @@ public class KeyInputHandler implements IContainerInputHandler {
 
     @Override
     public boolean mouseScrolled(GuiContainer gui, int mousex, int mousey, int scrolled) {
+        // 检查是否为AE终端界面
+        if (!isAE2Gui(gui)) {
+            return false;
+        }
+
+        // 获取鼠标下的物品
+        ItemStack stackUnderMouse = GuiContainerManager.getStackMouseOver(gui);
+        if (stackUnderMouse == null) {
+            return false;
+        }
+
+        // 检查鼠标是否在AE终端的物品显示区域内
+        if (!isMouseOverAETerminalItemArea(gui, mousex, mousey)) {
+            return false;
+        }
+
+        // 处理滚轮事件
+        // scrolled > 0 表示向上滚动，存入AE（不需要Shift）
+        // scrolled < 0 表示向下滚动，从AE取出（需要按住Shift）
+        if (scrolled > 0) {
+            // 向上滚动 - 存入AE（不需要按住Shift）
+            try {
+                ModNetwork.INSTANCE.sendToServer(new PacketScrollTransfer(stackUnderMouse, scrolled, 1));
+            } catch (Throwable e) {
+                // 静默处理异常
+            }
+            return true;
+        } else if (scrolled < 0 && isShiftKeyDown()) {
+            // 向下滚动 - 从AE取出（需要按住Shift）
+            try {
+                int transferAmount = calculateExtractAmount(stackUnderMouse);
+                ModNetwork.INSTANCE.sendToServer(new PacketScrollTransfer(stackUnderMouse, scrolled, transferAmount));
+            } catch (Throwable e) {
+                // 静默处理异常
+            }
+            return true;
+        }
+
+        // 不处理的情况返回false
         return false;
+    }
+
+    /**
+     * 计算取出数量（仅在按住Shift时调用）
+     * 按住Shift：1个
+     * 按住Shift+Ctrl：4个
+     * 按住Shift+Alt：1组（最大堆叠数）
+     */
+    private int calculateExtractAmount(ItemStack stack) {
+        boolean ctrlDown = Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) || Keyboard.isKeyDown(Keyboard.KEY_RCONTROL);
+        boolean altDown = Keyboard.isKeyDown(Keyboard.KEY_LMENU) || Keyboard.isKeyDown(Keyboard.KEY_RMENU);
+
+        if (altDown) {
+            // Shift+Alt：取出一组
+            return stack.getMaxStackSize();
+        } else if (ctrlDown) {
+            // Shift+Ctrl：取出4个
+            return Math.min(4, stack.getMaxStackSize());
+        } else {
+            // 只按Shift：取出1个
+            return 1;
+        }
     }
 
     @Override
@@ -115,15 +293,10 @@ public class KeyInputHandler implements IContainerInputHandler {
     public void onMouseDragged(GuiContainer gui, int mousex, int mousey, int button, long heldTime) {}
 
     /**
-     * 检查鼠标是否在NEI面板（书签面板、物品面板、历史记录面板）上
+     * 检查鼠标是否在NEI面板（物品面板、历史记录面板）上
      */
     private boolean isMouseOverNEIPanel(int mousex, int mousey) {
         try {
-            // 检查书签面板（左侧收藏）
-            if (ItemPanels.bookmarkPanel.contains(mousex, mousey)) {
-                return true;
-            }
-
             // 检查物品面板（右侧物品列表）
             if (ItemPanels.itemPanel.contains(mousex, mousey)) {
                 return true;
@@ -188,6 +361,40 @@ public class KeyInputHandler implements IContainerInputHandler {
             .getName();
         return className.startsWith("appeng.") || className.startsWith("com.glodblock.")
             || className.equals("net.p455w0rd.wirelesscraftingterminal.client.gui.GuiWirelessCraftingTerminal");
+    }
+
+    /**
+     * 检查鼠标是否在AE终端的物品显示区域内
+     * AE终端的物品通常显示在GUI的上半部分
+     */
+    private boolean isMouseOverAETerminalItemArea(GuiContainer gui, int mousex, int mousey) {
+        try {
+            String className = gui.getClass()
+                .getName();
+
+            // 使用Mixin Accessor获取GUI边界
+            GuiContainerAccessor accessor = (GuiContainerAccessor) gui;
+            int guiLeft = accessor.getGuiLeft();
+            int guiTop = accessor.getGuiTop();
+            int xSize = accessor.getXSize();
+            int ySize = accessor.getYSize();
+
+            // 物品区域通常在搜索框下方，玩家背包上方
+            // 大致区域：guiLeft + 7 到 guiLeft + xSize - 7
+            // y坐标：guiTop + 17 到 guiTop + ySize - 90 (排除搜索框和玩家背包区域)
+            int itemAreaTop = guiTop + 17;
+            int itemAreaBottom = guiTop + ySize - 90;
+            int itemAreaLeft = guiLeft + 7;
+            int itemAreaRight = guiLeft + xSize - 7;
+
+            return mousex >= itemAreaLeft && mousex <= itemAreaRight
+                && mousey >= itemAreaTop
+                && mousey <= itemAreaBottom;
+
+        } catch (Throwable e) {
+            // 如果反射失败，默认允许滚轮操作
+            return true;
+        }
     }
 
     private boolean isShiftKeyDown() {

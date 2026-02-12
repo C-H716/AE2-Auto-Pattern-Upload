@@ -15,6 +15,9 @@ public interface GuiContainerAccessor {
     @Accessor("guiTop")
     int getGuiTop();
 
+    @Accessor("xSize")
+    int getXSize();
+
     @Accessor("ySize")
     int getYSize();
 

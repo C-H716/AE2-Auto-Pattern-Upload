@@ -1,17 +1,19 @@
 package com.gali.ae2_auto_pattern_upload.network;
 
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.item.ItemStack;
+
+import com.gali.ae2_auto_pattern_upload.MyMod;
+import com.gali.ae2_auto_pattern_upload.util.AEUtil;
+
 import appeng.api.config.SecurityPermissions;
 import appeng.api.networking.IGrid;
 import appeng.api.storage.data.IAEItemStack;
-import com.gali.ae2_auto_pattern_upload.MyMod;
-import com.gali.ae2_auto_pattern_upload.util.AEUtil;
 import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.item.ItemStack;
 
 /**
  * 处理鼠标中键点击的合成下单请求
