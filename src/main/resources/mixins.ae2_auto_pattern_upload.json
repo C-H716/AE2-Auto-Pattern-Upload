@@ -5,17 +5,22 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "mixins.ae2_auto_pattern_upload.refmap.json",
   "mixins": [
-    "AEBaseContainerAccessor",
-    "ContainerMEMonitorableAccessor",
-    "ContainerPatternTermExMixin",
-    "ContainerPatternTermMixin",
-    "ContainerWirelessCraftingTerminalAccessor"
+    "ae2.ContainerFluidPatternTerminalExMixin",
+    "ae2.ContainerFluidPatternTerminalMixin",
+    "ae2.ContainerPatternTermExMixin",
+    "ae2.ContainerPatternTermMixin",
+    "ae2.MixinAEBaseTileBlock",
+    "ae2.MixinPartPlacement",
+    "ae2.accessor.AEBaseContainerAccessor",
+    "ae2.accessor.ContainerMEMonitorableAccessor",
+    "ae2.accessor.ContainerWirelessCraftingTerminalAccessor",
+    "ae2.accessor.GuiContainerAccessor"
   ],
   "client": [
-    "AEBaseGuiMixin",
-    "GuiContainerAccessor",
+    "ae2.AEBaseGuiMixin",
     "nei.MixinDefaultOverlayHandler",
-    "nei.MixinRecipeHandlerRef"
+    "nei.MixinRecipeHandlerRef",
+    "NEIShortcutInputHandlerMixin"
   ],
   "server": [
   ],

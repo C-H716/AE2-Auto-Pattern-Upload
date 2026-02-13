@@ -11,8 +11,8 @@ import net.p455w0rd.wirelesscraftingterminal.helpers.WirelessTerminalGuiObject;
 import net.p455w0rd.wirelesscraftingterminal.reference.Reference;
 
 import com.gali.ae2_auto_pattern_upload.MyMod;
-import com.gali.ae2_auto_pattern_upload.mixin.AEBaseContainerAccessor;
-import com.gali.ae2_auto_pattern_upload.mixin.ContainerWirelessCraftingTerminalAccessor;
+import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.AEBaseContainerAccessor;
+import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.ContainerWirelessCraftingTerminalAccessor;
 
 import appeng.api.AEApi;
 import appeng.api.config.SecurityPermissions;

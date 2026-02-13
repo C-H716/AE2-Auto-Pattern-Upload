@@ -1,4 +1,4 @@
-package com.gali.ae2_auto_pattern_upload.mixin;
+package com.gali.ae2_auto_pattern_upload.mixin.ae2;
 
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Slot;
@@ -8,15 +8,17 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import appeng.api.storage.ITerminalHost;
-import appeng.container.implementations.ContainerPatternTerm;
+import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.ContainerMEMonitorableAccessor;
 
-@Mixin(ContainerPatternTerm.class)
-public abstract class ContainerPatternTermMixin {
+import appeng.api.storage.ITerminalHost;
+import appeng.container.implementations.ContainerPatternTermEx;
+
+@Mixin(ContainerPatternTermEx.class)
+public abstract class ContainerPatternTermExMixin {
 
     @Inject(method = "<init>", at = @At("RETURN"), remap = false)
     private void onInit(InventoryPlayer ip, ITerminalHost monitorable, CallbackInfo ci) {
-        ContainerPatternTerm self = (ContainerPatternTerm) (Object) this;
+        ContainerPatternTermEx self = (ContainerPatternTermEx) (Object) this;
         // 获取空白样板槽位
         Slot patternSlotIN = self.getSlotFromInventory(
             self.getPatternTerminal()

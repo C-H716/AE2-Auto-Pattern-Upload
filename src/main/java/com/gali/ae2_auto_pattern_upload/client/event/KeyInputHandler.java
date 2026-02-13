@@ -11,7 +11,7 @@ import net.minecraft.item.ItemStack;
 
 import org.lwjgl.input.Keyboard;
 
-import com.gali.ae2_auto_pattern_upload.mixin.GuiContainerAccessor;
+import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.GuiContainerAccessor;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
 import com.gali.ae2_auto_pattern_upload.network.PacketExtractIngredients;
 import com.gali.ae2_auto_pattern_upload.network.PacketExtractItem;
@@ -137,19 +137,20 @@ public class KeyInputHandler implements IContainerInputHandler {
             return false;
         }
 
-        // Shift+左键点击书签组的主物品，提取组内材料
+        // Shift+左键点击书签物品
         if (button == MOUSE_LEFT && isShiftKeyDown()) {
-            return handleBookmarkGroupShiftClick(slot, stackUnderMouse);
+            return handleBookmarkShiftClick(slot, stackUnderMouse);
         }
 
         return false;
     }
 
     /**
-     * 处理Shift+左键点击书签组
-     * 如果点击的是主物品（RESULT类型），提取组内的所有材料
+     * 处理Shift+左键点击书签
+     * - 如果点击的是组的主物品（RESULT类型），提取组内的所有材料
+     * - 如果点击的是单独书签物品（ITEM类型），提取该物品本身
      */
-    private boolean handleBookmarkGroupShiftClick(BookmarksGridSlot slot, ItemStack clickedStack) {
+    private boolean handleBookmarkShiftClick(BookmarksGridSlot slot, ItemStack clickedStack) {
         if (slot == null || clickedStack == null) {
             return false;
         }
@@ -159,19 +160,20 @@ public class KeyInputHandler implements IContainerInputHandler {
             BookmarkItem.BookmarkItemType type = slot.getType();
             int groupId = slot.getGroupId();
 
-            // 只有点击主物品（RESULT）时才提取材料
-            if (type != BookmarkItem.BookmarkItemType.RESULT) {
-                return false;
+            // 如果是组的主物品（RESULT类型），提取组内所有材料
+            if (type == BookmarkItem.BookmarkItemType.RESULT) {
+                // 获取该组的所有材料
+                List<ItemStack> ingredients = getBookmarkGroupIngredients(groupId);
+                if (!ingredients.isEmpty()) {
+                    // 发送数据包到服务器提取材料
+                    ModNetwork.INSTANCE.sendToServer(new PacketExtractIngredients(ingredients));
+                    return true;
+                }
             }
 
-            // 获取该组的所有材料
-            List<ItemStack> ingredients = getBookmarkGroupIngredients(groupId);
-            if (ingredients.isEmpty()) {
-                return false;
-            }
-
-            // 发送数据包到服务器提取材料
-            ModNetwork.INSTANCE.sendToServer(new PacketExtractIngredients(ingredients));
+            // 如果是单独书签物品（ITEM类型）或组内没有材料，提取该物品本身
+            // 使用原有的提取逻辑
+            ModNetwork.INSTANCE.sendToServer(new PacketExtractItem(clickedStack, true));
             return true;
 
         } catch (Throwable e) {

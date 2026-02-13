@@ -6,7 +6,7 @@ import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 
-import com.gali.ae2_auto_pattern_upload.mixin.GuiContainerAccessor;
+import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.GuiContainerAccessor;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
 import com.gali.ae2_auto_pattern_upload.network.RequestProvidersListPacket;
 import com.glodblock.github.client.gui.GuiFluidPatternTerminal;

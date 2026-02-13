@@ -1,4 +1,4 @@
-package com.gali.ae2_auto_pattern_upload.mixin;
+package com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor;
 
 import net.p455w0rd.wirelesscraftingterminal.common.container.ContainerWirelessCraftingTerminal;
 
