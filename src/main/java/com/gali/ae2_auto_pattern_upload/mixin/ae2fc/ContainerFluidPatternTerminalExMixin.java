@@ -1,4 +1,4 @@
-package com.gali.ae2_auto_pattern_upload.mixin.ae2;
+package com.gali.ae2_auto_pattern_upload.mixin.ae2fc;
 
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Slot;
@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminal;
+import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminalEx;
 
 import appeng.api.AEApi;
 import appeng.api.definitions.IDefinitions;
@@ -20,12 +20,12 @@ import appeng.api.storage.ITerminalHost;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.util.Platform;
 
-@Mixin(ContainerFluidPatternTerminal.class)
-public abstract class ContainerFluidPatternTerminalMixin {
+@Mixin(ContainerFluidPatternTerminalEx.class)
+public abstract class ContainerFluidPatternTerminalExMixin {
 
     @Inject(method = "<init>", at = @At("RETURN"), remap = false)
     private void onInit(InventoryPlayer ip, ITerminalHost monitorable, CallbackInfo ci) {
-        ContainerFluidPatternTerminal self = (ContainerFluidPatternTerminal) (Object) this;
+        ContainerFluidPatternTerminalEx self = (ContainerFluidPatternTerminalEx) (Object) this;
         if (!Platform.isServer()) {
             return;
         }
@@ -74,7 +74,7 @@ public abstract class ContainerFluidPatternTerminalMixin {
 
             if (extracted != null) {
                 if (blanks != null) {
-                    blanks.stackSize += (int) extracted.getStackSize();
+                    blanks.stackSize += extracted.getStackSize();
                 } else {
                     blanks = extracted.getItemStack();
                 }

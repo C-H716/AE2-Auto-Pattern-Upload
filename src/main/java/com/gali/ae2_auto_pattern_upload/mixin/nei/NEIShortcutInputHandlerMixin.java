@@ -1,4 +1,4 @@
-package com.gali.ae2_auto_pattern_upload.mixin;
+package com.gali.ae2_auto_pattern_upload.mixin.nei;
 
 import java.awt.Point;
 import java.util.Collections;

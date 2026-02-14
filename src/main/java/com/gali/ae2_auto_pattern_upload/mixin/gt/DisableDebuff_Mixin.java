@@ -1,0 +1,23 @@
+package com.gali.ae2_auto_pattern_upload.mixin.gt;
+
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.potion.PotionEffect;
+
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
+
+import gregtech.common.blocks.ItemMachines;
+
+@Mixin(value = ItemMachines.class)
+public class DisableDebuff_Mixin {
+
+    @Redirect(
+        method = "onUpdate",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/entity/EntityLivingBase;addPotionEffect(Lnet/minecraft/potion/PotionEffect;)V"))
+    private void NHUtilities$disableDebuff(EntityLivingBase instance, PotionEffect potionEffect) {
+        // Null method problem
+    }
+}

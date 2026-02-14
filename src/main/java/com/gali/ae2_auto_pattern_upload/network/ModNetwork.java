@@ -57,5 +57,26 @@ public final class ModNetwork {
             PacketScrollTransfer.class,
             discriminator++,
             Side.SERVER);
+
+        // 注册请求正在合成物品数据包（客户端->服务器）
+        INSTANCE.registerMessage(
+            RequestCraftingItemsPacket.ServerHandler.class,
+            RequestCraftingItemsPacket.class,
+            discriminator++,
+            Side.SERVER);
+
+        // 注册正在合成物品更新数据包（服务器->客户端）
+        INSTANCE.registerMessage(
+            PacketCraftingItemsUpdate.ClientHandler.class,
+            PacketCraftingItemsUpdate.class,
+            discriminator++,
+            Side.CLIENT);
+
+        // 注册打开供应器界面数据包（客户端->服务器）
+        INSTANCE.registerMessage(
+            PacketOpenProviderGui.Handler.class,
+            PacketOpenProviderGui.class,
+            discriminator++,
+            Side.SERVER);
     }
 }
