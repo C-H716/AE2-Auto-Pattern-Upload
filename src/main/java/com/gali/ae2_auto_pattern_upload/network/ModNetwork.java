@@ -78,5 +78,12 @@ public final class ModNetwork {
             PacketOpenProviderGui.class,
             discriminator++,
             Side.SERVER);
+
+        // 注册鼠标中键提取物品到手上数据包（客户端->服务器）
+        INSTANCE.registerMessage(
+            PacketMiddleClickExtract.Handler.class,
+            PacketMiddleClickExtract.class,
+            discriminator++,
+            Side.SERVER);
     }
 }

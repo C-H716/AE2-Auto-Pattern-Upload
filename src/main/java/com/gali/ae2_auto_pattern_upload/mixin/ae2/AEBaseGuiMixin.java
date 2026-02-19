@@ -5,7 +5,10 @@ import net.minecraft.client.gui.inventory.GuiContainer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import com.gali.ae2_auto_pattern_upload.crafting.CraftingItemsCache;
 
 import appeng.client.gui.AEBaseGui;
 
@@ -18,6 +21,15 @@ public abstract class AEBaseGuiMixin extends GuiContainer {
 
     public AEBaseGuiMixin() {
         super(null);
+    }
+
+    /**
+     * Inject at the end of initGui to reset completed item timers
+     * This ensures players see completed items before the 5-second countdown starts
+     */
+    @Inject(method = "initGui", at = @At("TAIL"))
+    private void onInitGui(CallbackInfo ci) {
+        CraftingItemsCache.onTerminalOpened();
     }
 
     /**

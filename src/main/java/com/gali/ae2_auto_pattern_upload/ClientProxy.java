@@ -2,6 +2,7 @@ package com.gali.ae2_auto_pattern_upload;
 
 import com.gali.ae2_auto_pattern_upload.client.event.GuiUploadButtonHandler;
 import com.gali.ae2_auto_pattern_upload.client.event.KeyInputHandler;
+import com.gali.ae2_auto_pattern_upload.client.event.MouseInputHandler;
 
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 
@@ -15,6 +16,7 @@ public class ClientProxy extends CommonProxy {
         super.init(event);
         GuiUploadButtonHandler.register();
         KeyInputHandler.register();
+        MouseInputHandler.register();
     }
 
 }

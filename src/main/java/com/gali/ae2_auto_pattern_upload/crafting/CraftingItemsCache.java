@@ -1,15 +1,14 @@
 package com.gali.ae2_auto_pattern_upload.crafting;
 
+import appeng.api.storage.data.IAEItemStack;
+import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
+import com.gali.ae2_auto_pattern_upload.network.RequestCraftingItemsPacket;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-
-import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.RequestCraftingItemsPacket;
-
-import appeng.api.storage.data.IAEItemStack;
 
 /**
  * 缓存当前网络中CPU正在合成的物品
@@ -22,7 +21,7 @@ public class CraftingItemsCache {
     private static final Map<Integer, CraftingItemInfo> craftingItemsMap = new HashMap<>();
     private static long lastUpdateTime = 0;
     private static final long UPDATE_INTERVAL = 1000; // 每1000ms向服务器请求更新一次
-    private static final long COMPLETED_ITEM_DELAY = 5000; // 合成完成后延迟5秒才取消显示
+    private static final long COMPLETED_ITEM_DELAY = 10000; // 合成完成后延迟5秒才取消显示
 
     /**
      * 存储物品信息的内部类
@@ -199,5 +198,20 @@ public class CraftingItemsCache {
     public static void clear() {
         craftingItemsMap.clear();
         lastUpdateTime = 0;
+    }
+
+    /**
+     * 当玩家打开终端时调用
+     * 重置所有已完成物品的计时器，确保玩家看到后才启动5秒倒计时
+     */
+    public static void onTerminalOpened() {
+        long currentTime = System.currentTimeMillis();
+
+        for (CraftingItemInfo info : craftingItemsMap.values()) {
+            if (info.isCompleted) {
+                // 重置已完成物品的计时器，让玩家看到后再开始倒计时
+                info.completedTime = currentTime;
+            }
+        }
     }
 }

@@ -70,7 +70,55 @@ public class KeyInputHandler implements IContainerInputHandler {
         }
 
         // 写入搜索框
-        return setSearchText(searchField, itemName);
+        boolean result = setSearchText(searchField, itemName);
+
+        // 对于无线终端，需要手动触发搜索更新
+        // 因为无线终端的MEGuiTextField没有重写onTextChange方法
+        if (result && isWirelessTerminal(gui)) {
+            triggerWirelessTerminalSearch(gui, itemName);
+        }
+
+        return result;
+    }
+
+    /**
+     * 检查是否为无线终端界面
+     */
+    private boolean isWirelessTerminal(GuiContainer gui) {
+        if (gui == null) {
+            return false;
+        }
+        String className = gui.getClass()
+            .getName();
+        return className.equals("net.p455w0rd.wirelesscraftingterminal.client.gui.GuiWirelessCraftingTerminal");
+    }
+
+    /**
+     * 手动触发无线终端的搜索更新
+     * 无线终端的搜索框没有重写onTextChange，需要手动调用repo的更新方法
+     */
+    private void triggerWirelessTerminalSearch(GuiContainer gui, String searchText) {
+        try {
+            // 获取repo字段
+            Field repoField = gui.getClass()
+                .getDeclaredField("repo");
+            repoField.setAccessible(true);
+            Object repo = repoField.get(gui);
+
+            if (repo != null) {
+                // 调用repo.setSearchString(text)
+                Method setSearchString = repo.getClass()
+                    .getMethod("setSearchString", String.class);
+                setSearchString.invoke(repo, searchText);
+
+                // 调用repo.updateView()
+                Method updateView = repo.getClass()
+                    .getMethod("updateView");
+                updateView.invoke(repo);
+            }
+        } catch (Throwable e) {
+            // 静默失败
+        }
     }
 
     @Override

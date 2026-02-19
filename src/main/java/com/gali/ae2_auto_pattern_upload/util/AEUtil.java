@@ -137,6 +137,8 @@ public class AEUtil {
                     craftAmount.getCraftingItem()
                         .putStack(stack.getItemStack());
                     craftAmount.setItemToCraft(stack);
+                    // 设置默认合成数量为64
+                    craftAmount.setInitialCraftAmount(64);
                     craftAmount.detectAndSendChanges();
                 }
             }
@@ -433,13 +435,8 @@ public class AEUtil {
                 int z = (int) player.posZ;
                 WCTGuiHandler.launchGui(Reference.GUI_CRAFT_AMOUNT, player, player.worldObj, x, y, z);
 
-                // 设置要合成的物品到当前容器
-                if (player.openContainer instanceof ContainerCraftAmount craftAmount) {
-                    craftAmount.getCraftingItem()
-                        .putStack(aeStack.getItemStack());
-                    craftAmount.setItemToCraft(aeStack);
-                    craftAmount.detectAndSendChanges();
-                }
+                // 延迟设置要合成的物品（确保容器已打开）
+                scheduleSetCraftingItem(player, aeStack);
             } else {
                 // 使用 AE2 原版的方式打开合成界面
                 Platform.openGUI(
@@ -448,14 +445,19 @@ public class AEUtil {
                     net.minecraftforge.common.util.ForgeDirection.UNKNOWN,
                     GuiBridge.GUI_CRAFTING_AMOUNT);
 
-                // 设置要合成的物品到当前容器
-                if (player.openContainer instanceof ContainerCraftAmount craftAmount) {
-                    craftAmount.getCraftingItem()
-                        .putStack(aeStack.getItemStack());
-                    craftAmount.setItemToCraft(aeStack);
-                    craftAmount.detectAndSendChanges();
-                }
+                // 延迟设置要合成的物品（确保容器已打开）
+                scheduleSetCraftingItem(player, aeStack);
             }
         }
+    }
+
+    /**
+     * 延迟设置合成界面的物品（确保容器已打开）
+     */
+    private static void scheduleSetCraftingItem(EntityPlayerMP player, IAEItemStack aeStack) {
+        // 使用 FML 的延迟任务机制
+        cpw.mods.fml.common.FMLCommonHandler.instance()
+            .bus()
+            .register(new CraftingItemSetter(player, aeStack));
     }
 }

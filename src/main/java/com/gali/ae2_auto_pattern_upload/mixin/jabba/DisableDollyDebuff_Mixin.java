@@ -1,14 +1,16 @@
 package com.gali.ae2_auto_pattern_upload.mixin.jabba;
 
-import mcp.mobius.betterbarrels.common.items.dolly.ItemBarrelMover;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import mcp.mobius.betterbarrels.common.items.dolly.ItemBarrelMover;
 
 @Mixin(value = ItemBarrelMover.class)
 public class DisableDollyDebuff_Mixin {
