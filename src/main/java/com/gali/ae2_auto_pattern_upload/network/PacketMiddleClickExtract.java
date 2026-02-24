@@ -1,5 +1,13 @@
 package com.gali.ae2_auto_pattern_upload.network;
 
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.inventory.Container;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.common.util.ForgeDirection;
+
+import com.gali.ae2_auto_pattern_upload.MyMod;
+import com.gali.ae2_auto_pattern_upload.util.AEUtil;
+
 import appeng.api.config.Actionable;
 import appeng.api.config.SecurityPermissions;
 import appeng.api.networking.IGrid;
@@ -11,17 +19,11 @@ import appeng.api.storage.data.IAEItemStack;
 import appeng.container.AEBaseContainer;
 import appeng.util.InventoryAdaptor;
 import appeng.util.item.AEItemStack;
-import com.gali.ae2_auto_pattern_upload.MyMod;
-import com.gali.ae2_auto_pattern_upload.util.AEUtil;
 import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.inventory.Container;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.common.util.ForgeDirection;
 
 /**
  * 处理鼠标中键点击的物品提取到玩家手上的请求
@@ -182,8 +184,8 @@ public class PacketMiddleClickExtract implements IMessage {
                                 player.inventory.mainInventory[8] = null;
                             } else {
                                 // 背包没有空位，取消提取，将提取的物品返还到AE
-                                itemStorage.injectItems(extracted, Actionable.MODULATE,
-                                    new PlayerSource(player, actionHost));
+                                itemStorage
+                                    .injectItems(extracted, Actionable.MODULATE, new PlayerSource(player, actionHost));
                                 return;
                             }
                         }
@@ -216,8 +218,7 @@ public class PacketMiddleClickExtract implements IMessage {
         private int findEmptySlotInMainInventory(EntityPlayerMP player) {
             // 9-35是背包主存储区（不包括快捷栏0-8）
             for (int i = 9; i < 36; i++) {
-                if (player.inventory.mainInventory[i] == null
-                    || player.inventory.mainInventory[i].stackSize == 0) {
+                if (player.inventory.mainInventory[i] == null || player.inventory.mainInventory[i].stackSize == 0) {
                     return i;
                 }
             }

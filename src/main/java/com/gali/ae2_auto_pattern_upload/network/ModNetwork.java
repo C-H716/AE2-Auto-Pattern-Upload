@@ -85,5 +85,12 @@ public final class ModNetwork {
             PacketMiddleClickExtract.class,
             discriminator++,
             Side.SERVER);
+
+        // 注册安装样板容量卡数据包（客户端->服务器）
+        INSTANCE.registerMessage(
+            InstallCapacityCardPacket.Handler.class,
+            InstallCapacityCardPacket.class,
+            discriminator++,
+            Side.SERVER);
     }
 }

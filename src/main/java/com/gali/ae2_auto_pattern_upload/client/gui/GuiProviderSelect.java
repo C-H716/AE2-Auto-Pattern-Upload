@@ -1,8 +1,12 @@
 package com.gali.ae2_auto_pattern_upload.client.gui;
 
+import java.text.Collator;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -12,6 +16,7 @@ import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
 
+import com.gali.ae2_auto_pattern_upload.network.InstallCapacityCardPacket;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
 import com.gali.ae2_auto_pattern_upload.network.UploadPatternPacket;
 import com.gali.ae2_auto_pattern_upload.util.RecipeNameUtil;
@@ -28,6 +33,7 @@ public class GuiProviderSelect extends GuiScreen {
     private static final int BUTTON_DELETE = 104;
     private static final int BUTTON_CLOSE = 105;
     private static final int ENTRY_BUTTON_BASE = 200;
+    private static final int INSTALL_CARD_BUTTON_BASE = 300;
     private static final int PAGE_SIZE = 6;
 
     private final GuiScreen parent;
@@ -54,6 +60,79 @@ public class GuiProviderSelect extends GuiScreen {
         int count;
         int bestSlots;
     }
+
+    private static final Collator CHINESE_COLLATOR = Collator.getInstance(Locale.CHINESE);
+
+    private static final Comparator<GroupEntry> NATURAL_SORT_COMPARATOR = new Comparator<GroupEntry>() {
+
+        @Override
+        public int compare(GroupEntry a, GroupEntry b) {
+            return naturalCompare(a.name, b.name);
+        }
+
+        private int naturalCompare(String a, String b) {
+            if (a == null) a = "";
+            if (b == null) b = "";
+
+            int i = 0, j = 0;
+            while (i < a.length() && j < b.length()) {
+                char ca = a.charAt(i);
+                char cb = b.charAt(j);
+
+                boolean aIsDigit = Character.isDigit(ca);
+                boolean bIsDigit = Character.isDigit(cb);
+
+                if (aIsDigit && bIsDigit) {
+                    int numA = extractNumber(a, i);
+                    int numB = extractNumber(b, j);
+                    if (numA != numB) {
+                        return Integer.compare(numA, numB);
+                    }
+                    i = skipNumber(a, i);
+                    j = skipNumber(b, j);
+                } else {
+                    int cmp = compareChar(ca, cb);
+                    if (cmp != 0) {
+                        return cmp;
+                    }
+                    i++;
+                    j++;
+                }
+            }
+            return Integer.compare(a.length(), b.length());
+        }
+
+        private int compareChar(char ca, char cb) {
+            boolean aIsChinese = isChinese(ca);
+            boolean bIsChinese = isChinese(cb);
+
+            if (aIsChinese && bIsChinese) {
+                return CHINESE_COLLATOR.compare(String.valueOf(ca), String.valueOf(cb));
+            }
+
+            return Character.compare(ca, cb);
+        }
+
+        private boolean isChinese(char c) {
+            return c >= 0x4E00 && c <= 0x9FA5;
+        }
+
+        private int extractNumber(String s, int start) {
+            int num = 0;
+            while (start < s.length() && Character.isDigit(s.charAt(start))) {
+                num = num * 10 + (s.charAt(start) - '0');
+                start++;
+            }
+            return num;
+        }
+
+        private int skipNumber(String s, int start) {
+            while (start < s.length() && Character.isDigit(s.charAt(start))) {
+                start++;
+            }
+            return start;
+        }
+    };
 
     public GuiProviderSelect(List<Long> ids, List<String> names, List<Integer> emptySlots) {
         this(null, ids, names, emptySlots);
@@ -94,13 +173,24 @@ public class GuiProviderSelect extends GuiScreen {
             }
             entry.count++;
             entry.totalSlots += Math.max(0, slots);
-            if (slots > entry.bestSlots || entry.id == 0L) {
+            // 优先选择剩余槽位少的接口（但必须有至少1个空槽位）
+            if (entry.id == 0L) {
+                // 第一次初始化
+                entry.bestSlots = Math.max(0, slots);
+                entry.id = id;
+            } else if (slots > 0 && (entry.bestSlots <= 0 || slots < entry.bestSlots)) {
+                // 优先选择有槽位且剩余量少的接口
+                entry.bestSlots = Math.max(0, slots);
+                entry.id = id;
+            } else if (slots <= 0 && entry.bestSlots <= 0) {
+                // 如果都没有空槽位，记录最后一个（用于显示）
                 entry.bestSlots = Math.max(0, slots);
                 entry.id = id;
             }
         }
         groups.clear();
         groups.addAll(map.values());
+        Collections.sort(groups, NATURAL_SORT_COMPARATOR);
     }
 
     private void applyFilter() {
@@ -162,6 +252,18 @@ public class GuiProviderSelect extends GuiScreen {
                 button.enabled = false;
             }
             this.buttonList.add(button);
+
+            // 如果没有空槽位，添加安装样板容量卡按钮
+            if (entry.totalSlots <= 0) {
+                GuiButton installCardBtn = new GuiButton(
+                    INSTALL_CARD_BUTTON_BASE + localIndex,
+                    centerX + 125,
+                    startY + localIndex * 25,
+                    35,
+                    20,
+                    translate("gui.ae2_auto_pattern_upload.install_card"));
+                this.buttonList.add(installCardBtn);
+            }
         }
         GuiButton prevBtn = new GuiButton(BUTTON_PREV, centerX - 60, navY, 20, 20, "<");
         GuiButton nextBtn = new GuiButton(BUTTON_NEXT, centerX + 40, navY, 20, 20, ">");
@@ -219,6 +321,16 @@ public class GuiProviderSelect extends GuiScreen {
             return;
         }
 
+        // 处理安装样板容量卡按钮点击
+        if (button.id >= INSTALL_CARD_BUTTON_BASE && button.id < INSTALL_CARD_BUTTON_BASE + PAGE_SIZE) {
+            int idx = start + (button.id - INSTALL_CARD_BUTTON_BASE);
+            if (idx >= 0 && idx < filtered.size()) {
+                long providerId = filtered.get(idx).id;
+                installCapacityCard(providerId);
+            }
+            return;
+        }
+
         switch (button.id) {
             case BUTTON_PREV:
                 changePage(-1);
@@ -250,6 +362,10 @@ public class GuiProviderSelect extends GuiScreen {
         } else {
             this.mc.displayGuiScreen(null);
         }
+    }
+
+    protected void installCapacityCard(long providerId) {
+        ModNetwork.CHANNEL.sendToServer(new InstallCapacityCardPacket(providerId));
     }
 
     private void changePage(int delta) {
