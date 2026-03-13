@@ -88,23 +88,33 @@ public class PacketMiddleClickExtract implements IMessage {
                     return null;
                 }
 
-                // 检查网络中是否有该物品（使用模糊匹配，忽略NBT差异）
-                java.util.Collection<IAEItemStack> fuzzyList = itemStorage.getStorageList()
-                    .findFuzzy(aeStack, appeng.api.config.FuzzyMode.IGNORE_ALL);
-                IAEItemStack stored = null;
-                if (fuzzyList != null && !fuzzyList.isEmpty()) {
-                    stored = fuzzyList.iterator()
-                        .next();
+                // 检查网络中是否有该物品（使用精确匹配）
+                IAEItemStack stored = itemStorage.getStorageList()
+                    .findPrecise(aeStack);
+
+                // 如果精确匹配失败，尝试模糊匹配
+                if (stored == null || stored.getStackSize() <= 0) {
+                    java.util.Collection<IAEItemStack> fuzzyList = itemStorage.getStorageList()
+                        .findFuzzy(aeStack, appeng.api.config.FuzzyMode.IGNORE_ALL);
+                    if (fuzzyList != null && !fuzzyList.isEmpty()) {
+                        for (IAEItemStack fuzzy : fuzzyList) {
+                            if (fuzzy.getStackSize() > 0) {
+                                stored = fuzzy;
+                                break;
+                            }
+                        }
+                    }
                 }
+
                 boolean hasStock = stored != null && stored.getStackSize() > 0;
 
                 if (hasStock) {
                     // 有库存，执行提取到玩家手上的操作
-                    extractItemToHand(player, grid, aeStack, itemStorage);
+                    extractItemToHand(player, grid, stored, itemStorage);
                 } else if (AEUtil.isCraftable(grid, aeStack)) {
                     // 无库存但可合成，检查合成权限后打开合成下单界面
                     if (AEUtil.hasGridPermission(player, grid, SecurityPermissions.CRAFT)) {
-                        // 设置默认合成数量为64
+                        // 设置默认合成数量为1
                         IAEItemStack craftStack = aeStack.copy();
                         craftStack.setStackSize(1);
                         AEUtil.openCraftingAmountGui(player, craftStack);
@@ -123,21 +133,14 @@ public class PacketMiddleClickExtract implements IMessage {
          * 1. 优先放到快捷栏(0-8)的空位，然后切换到该栏位
          * 2. 如果没有空位，替换9号位(索引8)，然后切换到9号栏位
          */
-        private void extractItemToHand(EntityPlayerMP player, IGrid grid, IAEItemStack stack,
+        private void extractItemToHand(EntityPlayerMP player, IGrid grid, IAEItemStack actualStack,
             IMEMonitor<IAEItemStack> itemStorage) {
             try {
-                // 准备提取物品（提取一组）
-                // 使用模糊匹配找到网络中的实际物品
-                java.util.Collection<IAEItemStack> fuzzyList = itemStorage.getStorageList()
-                    .findFuzzy(stack, appeng.api.config.FuzzyMode.IGNORE_ALL);
-                IAEItemStack actualStack = null;
-                if (fuzzyList != null && !fuzzyList.isEmpty()) {
-                    actualStack = fuzzyList.iterator()
-                        .next();
-                }
-                if (actualStack == null) {
+                if (actualStack == null || actualStack.getStackSize() <= 0) {
                     return;
                 }
+
+                // 准备提取物品（提取一组）
                 IAEItemStack toExtract = actualStack.copy();
                 ItemStack itemStack = toExtract.getItemStack();
                 int maxStackSize = itemStack.getMaxStackSize();

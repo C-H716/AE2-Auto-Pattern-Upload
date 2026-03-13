@@ -1,14 +1,15 @@
 package com.gali.ae2_auto_pattern_upload.crafting;
 
-import appeng.api.storage.data.IAEItemStack;
-import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.RequestCraftingItemsPacket;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+
+import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
+import com.gali.ae2_auto_pattern_upload.network.RequestCraftingItemsPacket;
+
+import appeng.api.storage.data.IAEItemStack;
 
 /**
  * 缓存当前网络中CPU正在合成的物品

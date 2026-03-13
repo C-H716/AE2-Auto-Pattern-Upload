@@ -9,6 +9,7 @@
     "ae2.ContainerPatternTermMixin",
     "ae2.MixinAEBaseTileBlock",
     "ae2.MixinPartPlacement",
+    "ae2.QuantumClusterMixin",
     "ae2.accessor.AEBaseContainerAccessor",
     "ae2.accessor.ContainerMEMonitorableAccessor",
     "ae2.accessor.ContainerWirelessCraftingTerminalAccessor",
@@ -16,6 +17,7 @@
     "ae2fc.ContainerFluidPatternTerminalExMixin",
     "ae2fc.ContainerFluidPatternTerminalMixin",
     "gt.DisableDebuff_Mixin",
+    "gt.ToolVajraMixin",
     "jabba.DisableDollyDebuff_Mixin"
   ],
   "client": [

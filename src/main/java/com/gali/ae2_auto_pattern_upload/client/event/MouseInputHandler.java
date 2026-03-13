@@ -3,6 +3,7 @@ package com.gali.ae2_auto_pattern_upload.client.event;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityClientPlayerMP;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraftforge.client.event.MouseEvent;
@@ -10,6 +11,7 @@ import net.minecraftforge.client.event.MouseEvent;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
 import com.gali.ae2_auto_pattern_upload.network.PacketMiddleClickExtract;
 
+import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -22,13 +24,15 @@ import cpw.mods.fml.relauncher.SideOnly;
 public class MouseInputHandler {
 
     private static final int MOUSE_MIDDLE = 2;
-    private static boolean wasMiddleDown = false;
+    private static final long COOLDOWN_MS = 500;
+    private static long lastMiddleClickTime = 0;
+    private static ItemStack lastTargetStack = null;
 
     public static void register() {
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new MouseInputHandler());
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onMouseEvent(MouseEvent event) {
         // 检查是否是中键点击
         if (event.button != MOUSE_MIDDLE) {
@@ -47,6 +51,19 @@ public class MouseInputHandler {
             return;
         }
 
+        // 检查玩家是否处于生存模式
+        // 通过capabilities判断：创造模式和旁观模式的玩家可以飞行
+        if (player.capabilities.isCreativeMode) {
+            return;
+        }
+
+        // 检查手持物品是否是 GT 的无限喷漆罐
+        // 如果是，让 GT 处理中键事件（例如无限喷漆罐的吸取颜色功能）
+        ItemStack heldItem = player.getHeldItem();
+        if (heldItem != null && isInfiniteSprayCan(heldItem)) {
+            return;
+        }
+
         // 获取准星指向的对象
         MovingObjectPosition target = mc.objectMouseOver;
         if (target == null) {
@@ -57,77 +74,12 @@ public class MouseInputHandler {
         ItemStack targetStack = null;
 
         if (target.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK) {
-            // 指向方块，获取方块的物品形式
+            // 指向方块，使用 Forge 原生方法获取 pick block
             Block block = mc.theWorld.getBlock(target.blockX, target.blockY, target.blockZ);
-            int meta = mc.theWorld.getBlockMetadata(target.blockX, target.blockY, target.blockZ);
             if (block != null) {
-                // 尝试多种方式获取方块的物品形式
-
-                // 方式1: 尝试获取TE的item形式（适用于AE Part类方块）
-                try {
-                    net.minecraft.tileentity.TileEntity te = mc.theWorld
-                        .getTileEntity(target.blockX, target.blockY, target.blockZ);
-                    if (te != null) {
-                        // 尝试调用getDrops或类似方法获取物品
-                        java.lang.reflect.Method getItem = te.getClass()
-                            .getMethod("getItemFromTile");
-                        targetStack = (ItemStack) getItem.invoke(te);
-                    }
-                } catch (Throwable ignored) {}
-
-                // 方式2: 使用 Item.getItemFromBlock（最可靠的方式）
-                if (targetStack == null || targetStack.getItem() == null) {
-                    try {
-                        net.minecraft.item.Item item = net.minecraft.item.Item.getItemFromBlock(block);
-                        if (item != null) {
-                            // 对于红石粉等特殊方块，需要使用 damageDropped 获取正确的 meta
-                            int damage = block.damageDropped(meta);
-                            targetStack = new ItemStack(item, 1, damage);
-                        }
-                    } catch (Throwable ignored) {}
-                }
-
-                // 方式3: 使用 getPickBlock（Forge添加的方法，最准确）
-                if (targetStack == null || targetStack.getItem() == null) {
-                    try {
-                        java.lang.reflect.Method getPickBlock = Block.class.getMethod(
-                            "getPickBlock",
-                            MovingObjectPosition.class,
-                            net.minecraft.world.World.class,
-                            int.class,
-                            int.class,
-                            int.class);
-                        targetStack = (ItemStack) getPickBlock
-                            .invoke(block, target, mc.theWorld, target.blockX, target.blockY, target.blockZ);
-                    } catch (Throwable ignored) {}
-                }
-
-                // 方式4: 使用 createStackedBlock（适用于某些特殊方块）
-                if (targetStack == null || targetStack.getItem() == null) {
-                    try {
-                        java.lang.reflect.Method createStackedBlock = Block.class
-                            .getDeclaredMethod("createStackedBlock", int.class);
-                        createStackedBlock.setAccessible(true);
-                        targetStack = (ItemStack) createStackedBlock.invoke(block, meta);
-                    } catch (Throwable ignored) {}
-                }
-
-                // 方式5: 使用 getItemDropped（适用于大多数方块）
-                if (targetStack == null || targetStack.getItem() == null) {
-                    try {
-                        net.minecraft.item.Item item = block.getItemDropped(meta, mc.theWorld.rand, 0);
-                        if (item != null) {
-                            targetStack = new ItemStack(item, 1, block.damageDropped(meta));
-                        }
-                    } catch (Throwable ignored) {}
-                }
-
-                // 方式6: 直接使用方块对应的物品（适用于普通方块）
-                if (targetStack == null || targetStack.getItem() == null) {
-                    try {
-                        targetStack = new ItemStack(block, 1, meta);
-                    } catch (Throwable ignored) {}
-                }
+                // 使用 Forge 的 getPickBlock 方法，传递 player 参数以支持 AE 线缆等复杂方块
+                targetStack = block
+                    .getPickBlock(target, mc.theWorld, target.blockX, target.blockY, target.blockZ, player);
             }
         }
 
@@ -135,10 +87,20 @@ public class MouseInputHandler {
             return;
         }
 
-        // 检查玩家背包中是否已有该物品
+        // 防抖动：检查冷却时间和目标物品是否相同
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastMiddleClickTime < COOLDOWN_MS && lastTargetStack != null
+            && lastTargetStack.isItemEqual(targetStack)) {
+            event.setCanceled(true);
+            return;
+        }
+        lastMiddleClickTime = currentTime;
+        lastTargetStack = targetStack.copy();
+
+        // 检查玩家背包或快捷栏中是否已有该物品（包括手中的物品）
         // 如果背包中有，让原版逻辑处理（不取消事件）
         // 如果背包中没有，发送到服务器从AE提取
-        if (hasItemInInventory(player, targetStack)) {
+        if (hasItemInInventoryOrHand(player, targetStack)) {
             // 背包中有该物品，不取消事件，让原版处理
             return;
         }
@@ -149,13 +111,37 @@ public class MouseInputHandler {
     }
 
     /**
-     * 检查玩家背包中是否有指定物品
+     * 检查物品是否是 GregTech 的无限喷漆罐
+     * 用于让 GT 处理自己的中键事件（如无限喷漆罐的吸取颜色）
      */
-    private boolean hasItemInInventory(EntityClientPlayerMP player, ItemStack stack) {
+    private boolean isInfiniteSprayCan(ItemStack stack) {
         if (stack == null || stack.getItem() == null) {
             return false;
         }
 
+        // 根据 NBT 数据检测
+        // id: 7511, Damage: 32468
+        int itemId = Item.getIdFromItem(stack.getItem());
+        int damage = stack.getItemDamage();
+        return itemId == 7511 && damage == 32468;
+    }
+
+    /**
+     * 检查玩家背包或手中是否有指定物品
+     */
+    private boolean hasItemInInventoryOrHand(EntityClientPlayerMP player, ItemStack stack) {
+        if (stack == null || stack.getItem() == null) {
+            return false;
+        }
+
+        // 检查手中持有的物品
+        ItemStack heldItem = player.getHeldItem();
+        if (heldItem != null && heldItem.getItem() == stack.getItem()
+            && heldItem.getItemDamage() == stack.getItemDamage()) {
+            return true;
+        }
+
+        // 检查背包中的所有物品（包括快捷栏）
         for (int i = 0; i < player.inventory.mainInventory.length; i++) {
             ItemStack invStack = player.inventory.mainInventory[i];
             if (invStack != null && invStack.getItem() == stack.getItem()) {

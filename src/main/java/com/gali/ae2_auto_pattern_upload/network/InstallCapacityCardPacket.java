@@ -1,5 +1,18 @@
 package com.gali.ae2_auto_pattern_upload.network;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.inventory.Container;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntity;
+
+import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminal;
+import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminalEx;
+import com.glodblock.github.inventory.item.IItemPatternTerminal;
+
 import appeng.api.AEApi;
 import appeng.api.config.Upgrades;
 import appeng.api.networking.IGrid;
@@ -15,21 +28,10 @@ import appeng.container.implementations.ContainerPatternTermEx;
 import appeng.helpers.IInterfaceHost;
 import appeng.parts.AEBasePart;
 import appeng.parts.automation.UpgradeInventory;
-import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminal;
-import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminalEx;
-import com.glodblock.github.inventory.item.IItemPatternTerminal;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.inventory.Container;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 请求为指定接口安装样板容量卡的数据包
@@ -38,8 +40,7 @@ public class InstallCapacityCardPacket implements IMessage {
 
     private long providerId;
 
-    public InstallCapacityCardPacket() {
-    }
+    public InstallCapacityCardPacket() {}
 
     public InstallCapacityCardPacket(long providerId) {
         this.providerId = providerId;
@@ -98,7 +99,8 @@ public class InstallCapacityCardPacket implements IMessage {
                 int currentUpgrades = targetInterface.getInstalledUpgrades(Upgrades.PATTERN_CAPACITY);
 
                 // 获取升级槽位Inventory并检查最大可安装数量
-                IInventory upgrades = targetInterface.getInterfaceDuality().getInventoryByName("upgrades");
+                IInventory upgrades = targetInterface.getInterfaceDuality()
+                    .getInventoryByName("upgrades");
                 int maxUpgrades = 3; // 默认最大3个样板容量卡
                 if (upgrades instanceof UpgradeInventory) {
                     maxUpgrades = ((UpgradeInventory) upgrades).getMaxInstalled(Upgrades.PATTERN_CAPACITY);
@@ -124,12 +126,14 @@ public class InstallCapacityCardPacket implements IMessage {
                 }
 
                 // 检查网络中是否有样板容量卡
-                IAEItemStack cardStack = AEApi.instance().storage().createItemStack(capacityCard);
-                IAEItemStack extracted = storageGrid.getItemInventory().extractItems(
-                    cardStack,
-                    appeng.api.config.Actionable.MODULATE,
-                    new appeng.api.networking.security.PlayerSource(player, terminal)
-                );
+                IAEItemStack cardStack = AEApi.instance()
+                    .storage()
+                    .createItemStack(capacityCard);
+                IAEItemStack extracted = storageGrid.getItemInventory()
+                    .extractItems(
+                        cardStack,
+                        appeng.api.config.Actionable.MODULATE,
+                        new appeng.api.networking.security.PlayerSource(player, terminal));
 
                 if (extracted == null || extracted.getStackSize() <= 0) {
                     sendMessage(player, "ae2_auto_pattern_upload.info.no_capacity_card_in_network");
@@ -139,11 +143,11 @@ public class InstallCapacityCardPacket implements IMessage {
                 // 检查升级槽位是否为null
                 if (upgrades == null) {
                     // 返还提取的物品
-                    storageGrid.getItemInventory().injectItems(
-                        extracted,
-                        appeng.api.config.Actionable.MODULATE,
-                        new appeng.api.networking.security.PlayerSource(player, terminal)
-                    );
+                    storageGrid.getItemInventory()
+                        .injectItems(
+                            extracted,
+                            appeng.api.config.Actionable.MODULATE,
+                            new appeng.api.networking.security.PlayerSource(player, terminal));
                     sendMessage(player, "ae2_auto_pattern_upload.info.no_upgrade_slots");
                     return null;
                 }
@@ -152,7 +156,8 @@ public class InstallCapacityCardPacket implements IMessage {
                 boolean inserted = false;
                 for (int i = 0; i < upgrades.getSizeInventory(); i++) {
                     if (upgrades.getStackInSlot(i) == null || upgrades.getStackInSlot(i).stackSize <= 0) {
-                        ItemStack cardToInsert = extracted.getItemStack().copy();
+                        ItemStack cardToInsert = extracted.getItemStack()
+                            .copy();
                         cardToInsert.stackSize = 1;
                         upgrades.setInventorySlotContents(i, cardToInsert);
                         inserted = true;
@@ -162,11 +167,11 @@ public class InstallCapacityCardPacket implements IMessage {
 
                 if (!inserted) {
                     // 返还提取的物品
-                    storageGrid.getItemInventory().injectItems(
-                        extracted,
-                        appeng.api.config.Actionable.MODULATE,
-                        new appeng.api.networking.security.PlayerSource(player, terminal)
-                    );
+                    storageGrid.getItemInventory()
+                        .injectItems(
+                            extracted,
+                            appeng.api.config.Actionable.MODULATE,
+                            new appeng.api.networking.security.PlayerSource(player, terminal));
                     sendMessage(player, "ae2_auto_pattern_upload.info.no_empty_upgrade_slot");
                     return null;
                 }
@@ -175,11 +180,11 @@ public class InstallCapacityCardPacket implements IMessage {
                 if (extracted.getStackSize() > 1) {
                     IAEItemStack remaining = extracted.copy();
                     remaining.setStackSize(extracted.getStackSize() - 1);
-                    storageGrid.getItemInventory().injectItems(
-                        remaining,
-                        appeng.api.config.Actionable.MODULATE,
-                        new appeng.api.networking.security.PlayerSource(player, terminal)
-                    );
+                    storageGrid.getItemInventory()
+                        .injectItems(
+                            remaining,
+                            appeng.api.config.Actionable.MODULATE,
+                            new appeng.api.networking.security.PlayerSource(player, terminal));
                 }
 
                 // 保存更改
@@ -187,10 +192,7 @@ public class InstallCapacityCardPacket implements IMessage {
 
                 // 发送成功消息
                 int newEmptySlots = calculateEmptySlots(targetInterface);
-                sendMessage(player, String.format(
-                    translate(player, "ae2_auto_pattern_upload.info.capacity_card_installed"),
-                    newEmptySlots
-                ));
+                sendMessageWithArgs(player, "ae2_auto_pattern_upload.info.capacity_card_installed", newEmptySlots);
 
                 // 刷新供应器列表
                 refreshProvidersList(player, container, grid);
@@ -258,7 +260,12 @@ public class InstallCapacityCardPacket implements IMessage {
 
         private ItemStack getPatternCapacityCard() {
             try {
-                return AEApi.instance().definitions().materials().cardPatternCapacity().maybeStack(1).orNull();
+                return AEApi.instance()
+                    .definitions()
+                    .materials()
+                    .cardPatternCapacity()
+                    .maybeStack(1)
+                    .orNull();
             } catch (Throwable t) {
                 t.printStackTrace();
                 return null;
@@ -282,10 +289,84 @@ public class InstallCapacityCardPacket implements IMessage {
             return 0;
         }
 
+        /**
+         * 槽位信息
+         */
+        private static class SlotInfo {
+
+            int emptySlots;
+            boolean canInstallCard;
+
+            SlotInfo(int emptySlots, boolean canInstallCard) {
+                this.emptySlots = emptySlots;
+                this.canInstallCard = canInstallCard;
+            }
+        }
+
+        /**
+         * 获取接口的槽位信息
+         */
+        private SlotInfo getSlotInfo(ICraftingProvider provider) {
+            if (provider instanceof IInterfaceHost host) {
+                int empty = calculateEmptySlots(host);
+                boolean canInstall = canInstallCapacityCard(host);
+                return new SlotInfo(empty, canInstall);
+            }
+            if (provider instanceof IInventory inv) {
+                int empty = 0;
+                for (int i = 0; i < inv.getSizeInventory(); i++) {
+                    ItemStack slot = inv.getStackInSlot(i);
+                    if (slot == null || slot.stackSize <= 0) {
+                        empty++;
+                    }
+                }
+                return new SlotInfo(empty, false);
+            }
+            return new SlotInfo(0, false);
+        }
+
+        /**
+         * 检查是否可以安装更多样板容量卡
+         */
+        private boolean canInstallCapacityCard(IInterfaceHost host) {
+            try {
+                int currentCards = host.getInstalledUpgrades(Upgrades.PATTERN_CAPACITY);
+                IInventory upgrades = host.getInterfaceDuality()
+                    .getInventoryByName("upgrades");
+                if (upgrades == null) {
+                    return false;
+                }
+
+                boolean hasEmptySlot = false;
+                for (int i = 0; i < upgrades.getSizeInventory(); i++) {
+                    ItemStack slot = upgrades.getStackInSlot(i);
+                    if (slot == null || slot.stackSize <= 0) {
+                        hasEmptySlot = true;
+                        break;
+                    }
+                }
+
+                if (!hasEmptySlot) {
+                    return false;
+                }
+
+                int maxCards = 3;
+                if (upgrades instanceof appeng.parts.automation.UpgradeInventory) {
+                    maxCards = ((appeng.parts.automation.UpgradeInventory) upgrades)
+                        .getMaxInstalled(Upgrades.PATTERN_CAPACITY);
+                }
+
+                return currentCards < maxCards;
+            } catch (Throwable t) {
+                return false;
+            }
+        }
+
         private void refreshProvidersList(EntityPlayerMP player, Container container, IGrid grid) {
             List<Long> ids = new ArrayList<Long>();
             List<String> names = new ArrayList<String>();
             List<Integer> emptySlots = new ArrayList<Integer>();
+            List<Boolean> canInstallCard = new ArrayList<Boolean>();
 
             for (Class<? extends IGridHost> hostClass : grid.getMachinesClasses()) {
                 if (!ICraftingProvider.class.isAssignableFrom(hostClass)) {
@@ -311,13 +392,20 @@ public class InstallCapacityCardPacket implements IMessage {
                     long id = System.identityHashCode(provider);
                     String name = resolveProviderName(machine);
 
-                    ids.add(id);
-                    names.add(name);
-                    emptySlots.add(estimateEmptySlots(provider));
+                    // 获取槽位信息和是否可以装卡
+                    SlotInfo slotInfo = getSlotInfo(provider);
+
+                    // 只显示有用的接口
+                    if (slotInfo.emptySlots > 0 || slotInfo.canInstallCard) {
+                        ids.add(id);
+                        names.add(name);
+                        emptySlots.add(slotInfo.emptySlots);
+                        canInstallCard.add(slotInfo.canInstallCard);
+                    }
                 }
             }
 
-            ModNetwork.CHANNEL.sendTo(new ProvidersListS2CPacket(ids, names, emptySlots), player);
+            ModNetwork.CHANNEL.sendTo(new ProvidersListS2CPacket(ids, names, emptySlots, canInstallCard), player);
         }
 
         private int estimateEmptySlots(ICraftingProvider provider) {
@@ -342,7 +430,8 @@ public class InstallCapacityCardPacket implements IMessage {
             if (machine instanceof TileEntity tile) {
                 try {
                     if (tile.getBlockType() != null) {
-                        name = tile.getBlockType().getLocalizedName();
+                        name = tile.getBlockType()
+                            .getLocalizedName();
                     }
                 } catch (Throwable ignored) {}
 
@@ -364,8 +453,15 @@ public class InstallCapacityCardPacket implements IMessage {
 
         private void sendMessage(EntityPlayerMP player, String key) {
             if (player != null && key != null && !key.isEmpty()) {
-                String msg = net.minecraft.util.StatCollector.translateToLocal(key);
-                player.addChatMessage(new net.minecraft.util.ChatComponentText(msg));
+                // 使用ChatComponentTranslation让客户端自行翻译
+                player.addChatMessage(new net.minecraft.util.ChatComponentTranslation(key));
+            }
+        }
+
+        private void sendMessageWithArgs(EntityPlayerMP player, String key, Object... args) {
+            if (player != null && key != null && !key.isEmpty()) {
+                // 使用ChatComponentTranslation让客户端自行翻译，支持参数
+                player.addChatMessage(new net.minecraft.util.ChatComponentTranslation(key, args));
             }
         }
 
