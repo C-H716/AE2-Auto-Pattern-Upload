@@ -1,5 +1,8 @@
 package com.gali.ae2_auto_pattern_upload.network;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
@@ -52,11 +55,35 @@ public class PacketMiddleClickExtract implements IMessage {
 
     public static class Handler implements IMessageHandler<PacketMiddleClickExtract, IMessage> {
 
+        // 服务器端冷却机制，防止重复请求
+        private static final Map<String, Long> playerLastRequestTime = new HashMap<>();
+        private static final Map<String, ItemStack> playerLastRequestItem = new HashMap<>();
+        private static final long COOLDOWN_MS = 800;
+
         @Override
         public IMessage onMessage(PacketMiddleClickExtract message, MessageContext ctx) {
             final EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (player == null) {
                 return null;
+            }
+
+            // 服务器端冷却验证，防止重复提取
+            String playerName = player.getCommandSenderName();
+            long currentTime = System.currentTimeMillis();
+            Long lastTime = playerLastRequestTime.get(playerName);
+            ItemStack lastItem = playerLastRequestItem.get(playerName);
+
+            if (lastTime != null && currentTime - lastTime < COOLDOWN_MS) {
+                if (lastItem != null && message.itemStack != null && lastItem.isItemEqual(message.itemStack)) {
+                    // 冷却时间内，相同物品的重复请求，忽略
+                    return null;
+                }
+            }
+
+            // 更新最后请求时间和物品
+            playerLastRequestTime.put(playerName, currentTime);
+            if (message.itemStack != null) {
+                playerLastRequestItem.put(playerName, message.itemStack.copy());
             }
 
             // 获取玩家网格

@@ -28,6 +28,7 @@ import net.minecraft.util.ChatComponentTranslation;
 import net.minecraft.util.IChatComponent;
 import net.minecraft.util.StatCollector;
 
+import com.gali.ae2_auto_pattern_upload.config.AutoUploadTargetConfig;
 import com.gali.ae2_auto_pattern_upload.network.InstallCapacityCardPacket;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
 import com.gali.ae2_auto_pattern_upload.network.UploadPatternPacket;
@@ -84,6 +85,7 @@ public class GuiProviderSelect extends GuiScreen {
         int bestSlots;
         boolean canInstallCard; // 是否可以安装样板容量卡
         boolean pinned; // 是否置顶
+        boolean autoUploadTarget; // 是否设置为自动上传目标
     }
 
     // 置顶功能相关
@@ -319,6 +321,7 @@ public class GuiProviderSelect extends GuiScreen {
                 entry = new GroupEntry();
                 entry.name = name;
                 entry.pinned = pinnedProviders.contains(name);
+                entry.autoUploadTarget = AutoUploadTargetConfig.isTarget(name);
                 map.put(name, entry);
             }
             entry.count++;
@@ -528,13 +531,14 @@ public class GuiProviderSelect extends GuiScreen {
     }
 
     private String buildLabel(GroupEntry entry) {
-        // 如果是置顶条目，在最左侧添加星星标志
+        // 置顶条目显示星星，自动上传目标显示箭头
         String prefix = entry.pinned ? "★ " : "";
-        return prefix + entry.name + " x" + entry.count + " - (" + entry.totalSlots + ")";
+        String autoUploadPrefix = entry.autoUploadTarget ? "⬆ " : "";
+        return prefix + autoUploadPrefix + entry.name + " x" + entry.count + " - (" + entry.totalSlots + ")";
     }
 
     /**
-     * 切换置顶状态
+     * 切换置顶状态（普通置顶）
      */
     private void togglePin(int filteredIndex) {
         if (filteredIndex < 0 || filteredIndex >= filtered.size()) {
@@ -555,6 +559,19 @@ public class GuiProviderSelect extends GuiScreen {
             if (!a.pinned && b.pinned) return 1;
             return NATURAL_SORT_COMPARATOR.compare(a, b);
         });
+        needsRefresh = true;
+    }
+
+    /**
+     * 切换自动上传目标状态
+     */
+    private void toggleAutoUploadTarget(int filteredIndex) {
+        if (filteredIndex < 0 || filteredIndex >= filtered.size()) {
+            return;
+        }
+        GroupEntry entry = filtered.get(filteredIndex);
+        AutoUploadTargetConfig.toggleTarget(entry.name);
+        entry.autoUploadTarget = !entry.autoUploadTarget;
         needsRefresh = true;
     }
 
@@ -762,6 +779,7 @@ public class GuiProviderSelect extends GuiScreen {
         }
 
         // 右键点击条目按钮时，切换置顶状态
+        // Ctrl+右键设置/取消自动上传目标，普通右键切换普通置顶
         if (mouseButton == 1) {
             int start = page * PAGE_SIZE;
             int end = Math.min(start + PAGE_SIZE, filtered.size());
@@ -776,7 +794,14 @@ public class GuiProviderSelect extends GuiScreen {
                 int btnY = startY + localIndex * 25;
 
                 if (isPointInRegion(mainBtnX, btnY, mainBtnWidth, 20, mouseX, mouseY)) {
-                    togglePin(i);
+                    // 检查是否按下了Ctrl键
+                    boolean isCtrlPressed = org.lwjgl.input.Keyboard.isKeyDown(org.lwjgl.input.Keyboard.KEY_LCONTROL)
+                        || org.lwjgl.input.Keyboard.isKeyDown(org.lwjgl.input.Keyboard.KEY_RCONTROL);
+                    if (isCtrlPressed) {
+                        toggleAutoUploadTarget(i);
+                    } else {
+                        togglePin(i);
+                    }
                     return;
                 }
             }

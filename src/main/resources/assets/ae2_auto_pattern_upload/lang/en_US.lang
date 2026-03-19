@@ -20,6 +20,7 @@ ae2_auto_pattern_upload.info.no_capacity_card_in_network=No pattern capacity car
 ae2_auto_pattern_upload.info.no_upgrade_slots=This interface has no upgrade slots.
 ae2_auto_pattern_upload.info.no_empty_upgrade_slot=No empty upgrade slot available.
 ae2_auto_pattern_upload.info.capacity_card_installed=Pattern capacity card installed! Available slots: %d
+ae2_auto_pattern_upload.info.auto_upload_success=Auto upload successful! Uploaded to "%s" provider.
 ae2_auto_pattern_upload.error.read_mappings=Could not read recipe mappings: %s
 ae2_auto_pattern_upload.error.create_template=Could not create default mapping template: %s
 ae2_auto_pattern_upload.error.write_mappings=Could not write recipe mappings: %s

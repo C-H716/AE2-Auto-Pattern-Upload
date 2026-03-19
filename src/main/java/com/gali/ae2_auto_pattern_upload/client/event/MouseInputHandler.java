@@ -3,7 +3,6 @@ package com.gali.ae2_auto_pattern_upload.client.event;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityClientPlayerMP;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraftforge.client.event.MouseEvent;
@@ -51,16 +50,16 @@ public class MouseInputHandler {
             return;
         }
 
-        // 检查玩家是否处于生存模式
-        // 通过capabilities判断：创造模式和旁观模式的玩家可以飞行
-        if (player.capabilities.isCreativeMode) {
+        // 检查手持物品是否是 GT 的无限喷漆罐
+        // 如果是，完全不干预事件，让 GT 自己处理中键事件（如吸取颜色功能）
+        ItemStack heldItem = player.getHeldItem();
+        if (isInfiniteSprayCan(heldItem)) {
             return;
         }
 
-        // 检查手持物品是否是 GT 的无限喷漆罐
-        // 如果是，让 GT 处理中键事件（例如无限喷漆罐的吸取颜色功能）
-        ItemStack heldItem = player.getHeldItem();
-        if (heldItem != null && isInfiniteSprayCan(heldItem)) {
+        // 检查玩家是否处于生存模式
+        // 通过capabilities判断：创造模式和旁观模式的玩家可以飞行
+        if (player.capabilities.isCreativeMode) {
             return;
         }
 
@@ -119,11 +118,18 @@ public class MouseInputHandler {
             return false;
         }
 
-        // 根据 NBT 数据检测
-        // id: 7511, Damage: 32468
-        int itemId = Item.getIdFromItem(stack.getItem());
+        // 使用 unlocalizedName 检测，这是固定的
+        // 无限喷漆罐属于 gt.metaitem.01，metadata 是 32468
+        String unlocalizedName = stack.getItem()
+            .getUnlocalizedName();
+        if (unlocalizedName == null) {
+            return false;
+        }
+
         int damage = stack.getItemDamage();
-        return itemId == 7511 && damage == 32468;
+        // 兼容两种格式：可能带或不带 item. 前缀
+        return (unlocalizedName.equals("gt.metaitem.01") || unlocalizedName.equals("item.gt.metaitem.01"))
+            && damage == 32468;
     }
 
     /**

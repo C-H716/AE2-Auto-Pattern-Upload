@@ -92,5 +92,12 @@ public final class ModNetwork {
             InstallCapacityCardPacket.class,
             discriminator++,
             Side.SERVER);
+
+        // 注册自动上传样板数据包（客户端->服务器）
+        INSTANCE.registerMessage(
+            AutoUploadPatternPacket.Handler.class,
+            AutoUploadPatternPacket.class,
+            discriminator++,
+            Side.SERVER);
     }
 }

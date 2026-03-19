@@ -20,6 +20,7 @@ ae2_auto_pattern_upload.info.no_capacity_card_in_network=网络中没有样板�
 ae2_auto_pattern_upload.info.no_upgrade_slots=该接口没有升级槽位。
 ae2_auto_pattern_upload.info.no_empty_upgrade_slot=没有空的升级槽位。
 ae2_auto_pattern_upload.info.capacity_card_installed=样板容量卡安装成功！当前可用槽位：%d
+ae2_auto_pattern_upload.info.auto_upload_success=自动上传成功！已上传至"%s"供应器。
 ae2_auto_pattern_upload.error.read_mappings=无法读取配方映射：%s
 ae2_auto_pattern_upload.error.create_template=无法创建默认映射模板：%s
 ae2_auto_pattern_upload.error.write_mappings=无法写入配方映射：%s
