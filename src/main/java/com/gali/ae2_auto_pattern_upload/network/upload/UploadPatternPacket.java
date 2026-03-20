@@ -1,4 +1,4 @@
-package com.gali.ae2_auto_pattern_upload.network;
+package com.gali.ae2_auto_pattern_upload.network.upload;
 
 import java.lang.reflect.Field;
 

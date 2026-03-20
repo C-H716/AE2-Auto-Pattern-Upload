@@ -8,7 +8,7 @@ import net.minecraftforge.common.MinecraftForge;
 
 import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.GuiContainerAccessor;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.RequestProvidersListPacket;
+import com.gali.ae2_auto_pattern_upload.network.provider.RequestProvidersListPacket;
 import com.glodblock.github.client.gui.GuiFluidPatternTerminal;
 import com.glodblock.github.client.gui.GuiFluidPatternTerminalEx;
 

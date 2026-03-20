@@ -31,7 +31,7 @@ import net.minecraft.util.StatCollector;
 import com.gali.ae2_auto_pattern_upload.config.AutoUploadTargetConfig;
 import com.gali.ae2_auto_pattern_upload.network.InstallCapacityCardPacket;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.UploadPatternPacket;
+import com.gali.ae2_auto_pattern_upload.network.upload.UploadPatternPacket;
 import com.gali.ae2_auto_pattern_upload.util.RecipeNameUtil;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

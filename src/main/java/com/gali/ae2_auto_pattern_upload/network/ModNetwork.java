@@ -1,5 +1,19 @@
 package com.gali.ae2_auto_pattern_upload.network;
 
+import com.gali.ae2_auto_pattern_upload.network.crafting.PacketCraftingItemsUpdate;
+import com.gali.ae2_auto_pattern_upload.network.crafting.PacketExtractIngredients;
+import com.gali.ae2_auto_pattern_upload.network.crafting.PacketOpenCraftingAmount;
+import com.gali.ae2_auto_pattern_upload.network.crafting.RequestCraftingItemsPacket;
+import com.gali.ae2_auto_pattern_upload.network.inventory.PacketExtractItem;
+import com.gali.ae2_auto_pattern_upload.network.inventory.PacketMiddleClickExtract;
+import com.gali.ae2_auto_pattern_upload.network.inventory.PacketScrollTransfer;
+import com.gali.ae2_auto_pattern_upload.network.provider.PacketOpenProviderGui;
+import com.gali.ae2_auto_pattern_upload.network.provider.ProvidersListS2CPacket;
+import com.gali.ae2_auto_pattern_upload.network.provider.RequestProvidersListPacket;
+import com.gali.ae2_auto_pattern_upload.network.upload.AutoUploadPatternPacket;
+import com.gali.ae2_auto_pattern_upload.network.upload.ClearRecipeNamePacket;
+import com.gali.ae2_auto_pattern_upload.network.upload.UploadPatternPacket;
+
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import cpw.mods.fml.relauncher.Side;
@@ -99,5 +113,12 @@ public final class ModNetwork {
             AutoUploadPatternPacket.class,
             discriminator++,
             Side.SERVER);
+
+        // 注册清除配方名称数据包（服务器->客户端）
+        INSTANCE.registerMessage(
+            ClearRecipeNamePacket.Handler.class,
+            ClearRecipeNamePacket.class,
+            discriminator++,
+            Side.CLIENT);
     }
 }

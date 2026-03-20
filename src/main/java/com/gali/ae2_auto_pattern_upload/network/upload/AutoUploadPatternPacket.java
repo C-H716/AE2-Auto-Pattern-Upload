@@ -1,4 +1,4 @@
-package com.gali.ae2_auto_pattern_upload.network;
+package com.gali.ae2_auto_pattern_upload.network.upload;
 
 import static com.gali.ae2_auto_pattern_upload.util.RecipeNameUtil.normalizeKey;
 
@@ -12,9 +12,8 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.StatCollector;
 
+import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
 import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminal;
 import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminalEx;
 import com.glodblock.github.client.gui.container.base.FCContainerEncodeTerminal;
@@ -22,17 +21,21 @@ import com.glodblock.github.common.item.ItemFluidEncodedPattern;
 import com.glodblock.github.inventory.item.IItemPatternTerminal;
 
 import appeng.api.AEApi;
+import appeng.api.config.Upgrades;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridHost;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IMachineSet;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionHost;
+import appeng.api.networking.storage.IStorageGrid;
+import appeng.api.storage.data.IAEItemStack;
 import appeng.container.implementations.ContainerPatternTerm;
 import appeng.container.implementations.ContainerPatternTermEx;
 import appeng.container.slot.SlotRestrictedInput;
 import appeng.helpers.IInterfaceHost;
 import appeng.parts.AEBasePart;
+import appeng.parts.automation.UpgradeInventory;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
@@ -149,8 +152,27 @@ public class AutoUploadPatternPacket implements IMessage {
                         if (terminal instanceof AEBasePart part) {
                             part.saveChanges();
                         }
-                        // Send success message
+                        // 发送成功消息
                         sendSuccessMessage(player, mappedName);
+                        // 通知客户端清除配方名称
+                        ModNetwork.CHANNEL.sendTo(new ClearRecipeNamePacket(), player);
+                    } else if (matchResult.canInstallCard) {
+                        // 上传失败但可以安装容量卡，尝试自动安装
+                        boolean installedAndPlaced = tryInstallCardAndPlacePattern(
+                            player,
+                            grid,
+                            matchResult.provider,
+                            encodedPattern.copy());
+                        if (installedAndPlaced) {
+                            outputSlot.putStack(null);
+                            if (terminal instanceof AEBasePart part) {
+                                part.saveChanges();
+                            }
+                            // 发送成功消息
+                            sendSuccessMessage(player, mappedName);
+                            // 通知客户端清除配方名称
+                            ModNetwork.CHANNEL.sendTo(new ClearRecipeNamePacket(), player);
+                        }
                     }
                 }
                 // PARTIAL_MATCH and NO_MATCH do nothing
@@ -161,10 +183,16 @@ public class AutoUploadPatternPacket implements IMessage {
 
         private void sendSuccessMessage(EntityPlayerMP player, String providerName) {
             if (player != null) {
-                String msg = String.format(
-                    StatCollector.translateToLocal("ae2_auto_pattern_upload.info.auto_upload_success"),
-                    providerName);
-                player.addChatMessage(new ChatComponentText(msg));
+                player.addChatMessage(
+                    new net.minecraft.util.ChatComponentTranslation(
+                        "ae2_auto_pattern_upload.info.auto_upload_success",
+                        providerName));
+            }
+        }
+
+        private void sendMessageWithArgs(EntityPlayerMP player, String key, Object... args) {
+            if (player != null && key != null && !key.isEmpty()) {
+                player.addChatMessage(new net.minecraft.util.ChatComponentTranslation(key, args));
             }
         }
 
@@ -178,10 +206,16 @@ public class AutoUploadPatternPacket implements IMessage {
 
             final ICraftingProvider provider;
             final MatchType matchType;
+            final boolean canInstallCard; // 是否可以安装样板容量卡
 
             ProviderMatchResult(ICraftingProvider provider, MatchType matchType) {
+                this(provider, matchType, false);
+            }
+
+            ProviderMatchResult(ICraftingProvider provider, MatchType matchType, boolean canInstallCard) {
                 this.provider = provider;
                 this.matchType = matchType;
+                this.canInstallCard = canInstallCard;
             }
         }
 
@@ -211,8 +245,14 @@ public class AutoUploadPatternPacket implements IMessage {
                     String providerName = resolveProviderName(machine);
                     String normalizedProviderName = normalizeKey(providerName);
                     boolean hasEmpty = hasEmptySlot(provider);
+                    boolean canInstall = canInstallCapacityCard(provider);
 
-                    ProviderInfo info = new ProviderInfo(provider, providerName, normalizedProviderName, hasEmpty);
+                    ProviderInfo info = new ProviderInfo(
+                        provider,
+                        providerName,
+                        normalizedProviderName,
+                        hasEmpty,
+                        canInstall);
                     allProviders.add(info);
                 }
             }
@@ -246,7 +286,14 @@ public class AutoUploadPatternPacket implements IMessage {
                     }
                 }
 
-                // No exact match providers have empty slots
+                // No exact match providers have empty slots, but check if can install card
+                for (ProviderInfo info : exactMatches) {
+                    if (info.canInstallCard) {
+                        return new ProviderMatchResult(info.provider, MatchType.EXACT_MATCH, true);
+                    }
+                }
+
+                // No exact match providers have empty slots or can install card
                 return new ProviderMatchResult(null, MatchType.NO_MATCH);
             }
 
@@ -272,6 +319,8 @@ public class AutoUploadPatternPacket implements IMessage {
                 ProviderInfo info = fuzzyMatches.get(0);
                 if (info.hasEmptySlot) {
                     return new ProviderMatchResult(info.provider, MatchType.EXACT_MATCH);
+                } else if (info.canInstallCard) {
+                    return new ProviderMatchResult(info.provider, MatchType.EXACT_MATCH, true);
                 } else {
                     return new ProviderMatchResult(null, MatchType.NO_MATCH);
                 }
@@ -286,12 +335,15 @@ public class AutoUploadPatternPacket implements IMessage {
             final String name;
             final String normalizedName;
             final boolean hasEmptySlot;
+            final boolean canInstallCard; // 是否可以安装样板容量卡
 
-            ProviderInfo(ICraftingProvider provider, String name, String normalizedName, boolean hasEmptySlot) {
+            ProviderInfo(ICraftingProvider provider, String name, String normalizedName, boolean hasEmptySlot,
+                boolean canInstallCard) {
                 this.provider = provider;
                 this.name = name;
                 this.normalizedName = normalizedName;
                 this.hasEmptySlot = hasEmptySlot;
+                this.canInstallCard = canInstallCard;
             }
         }
 
@@ -319,6 +371,170 @@ public class AutoUploadPatternPacket implements IMessage {
                 }
             }
             return false;
+        }
+
+        /**
+         * 检查是否可以安装样板容量卡
+         */
+        private boolean canInstallCapacityCard(ICraftingProvider provider) {
+            if (!(provider instanceof IInterfaceHost host)) {
+                return false;
+            }
+
+            try {
+                // 检查当前已安装的样板容量卡数量
+                int currentCards = host.getInstalledUpgrades(Upgrades.PATTERN_CAPACITY);
+
+                // 获取升级槽位 Inventory
+                IInventory upgrades = host.getInterfaceDuality()
+                    .getInventoryByName("upgrades");
+                if (upgrades == null) {
+                    return false;
+                }
+
+                // 检查是否有空的升级槽位
+                boolean hasEmptySlot = false;
+                for (int i = 0; i < upgrades.getSizeInventory(); i++) {
+                    ItemStack slot = upgrades.getStackInSlot(i);
+                    if (slot == null || slot.stackSize <= 0) {
+                        hasEmptySlot = true;
+                        break;
+                    }
+                }
+
+                if (!hasEmptySlot) {
+                    return false;
+                }
+
+                // 获取最大可安装数量
+                int maxCards = 3; // 默认最大 3 个
+                if (upgrades instanceof UpgradeInventory) {
+                    maxCards = ((UpgradeInventory) upgrades).getMaxInstalled(Upgrades.PATTERN_CAPACITY);
+                }
+
+                // 检查是否还能安装更多
+                return currentCards < maxCards;
+            } catch (Throwable t) {
+                return false;
+            }
+        }
+
+        /**
+         * 尝试安装样板容量卡并放入样板
+         */
+        private boolean tryInstallCardAndPlacePattern(EntityPlayerMP player, IGrid grid, ICraftingProvider provider,
+            ItemStack pattern) {
+            if (!(provider instanceof IInterfaceHost host)) {
+                return false;
+            }
+
+            try {
+                // 获取样板容量卡物品
+                ItemStack capacityCard = getPatternCapacityCard();
+                if (capacityCard == null) {
+                    return false;
+                }
+
+                // 检查网络中是否有样板容量卡
+                IStorageGrid storageGrid = grid.getCache(IStorageGrid.class);
+                if (storageGrid == null) {
+                    return false;
+                }
+
+                IAEItemStack cardStack = AEApi.instance()
+                    .storage()
+                    .createItemStack(capacityCard);
+                IAEItemStack extracted = storageGrid.getItemInventory()
+                    .extractItems(
+                        cardStack,
+                        appeng.api.config.Actionable.MODULATE,
+                        new appeng.api.networking.security.PlayerSource(player, host));
+
+                if (extracted == null || extracted.getStackSize() <= 0) {
+                    return false;
+                }
+
+                // 获取升级槽位 Inventory
+                IInventory upgrades = host.getInterfaceDuality()
+                    .getInventoryByName("upgrades");
+                if (upgrades == null) {
+                    // 返还提取的物品
+                    storageGrid.getItemInventory()
+                        .injectItems(
+                            extracted,
+                            appeng.api.config.Actionable.MODULATE,
+                            new appeng.api.networking.security.PlayerSource(player, host));
+                    return false;
+                }
+
+                // 找到空的升级槽位并放入卡片
+                boolean inserted = false;
+                for (int i = 0; i < upgrades.getSizeInventory(); i++) {
+                    if (upgrades.getStackInSlot(i) == null || upgrades.getStackInSlot(i).stackSize <= 0) {
+                        ItemStack cardToInsert = extracted.getItemStack()
+                            .copy();
+                        cardToInsert.stackSize = 1;
+                        upgrades.setInventorySlotContents(i, cardToInsert);
+                        inserted = true;
+                        break;
+                    }
+                }
+
+                if (!inserted) {
+                    // 返还提取的物品
+                    storageGrid.getItemInventory()
+                        .injectItems(
+                            extracted,
+                            appeng.api.config.Actionable.MODULATE,
+                            new appeng.api.networking.security.PlayerSource(player, host));
+                    return false;
+                }
+
+                // 如果有剩余物品，返还到网络
+                if (extracted.getStackSize() > 1) {
+                    IAEItemStack remaining = extracted.copy();
+                    remaining.setStackSize(extracted.getStackSize() - 1);
+                    storageGrid.getItemInventory()
+                        .injectItems(
+                            remaining,
+                            appeng.api.config.Actionable.MODULATE,
+                            new appeng.api.networking.security.PlayerSource(player, host));
+                }
+
+                // 保存更改
+                host.saveChanges();
+
+                // 发送成功消息
+                sendMessageWithArgs(player, "ae2_auto_pattern_upload.info.auto_install_card_success");
+
+                // 尝试放入样板
+                IInventory patterns = host.getPatterns();
+                if (patterns != null) {
+                    int availableSlots = host.rows() * host.rowSize();
+                    if (insertIntoPatternInventory(patterns, pattern, availableSlots)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            } catch (Throwable t) {
+                t.printStackTrace();
+                return false;
+            }
+        }
+
+        private ItemStack getPatternCapacityCard() {
+            try {
+                return AEApi.instance()
+                    .definitions()
+                    .materials()
+                    .cardPatternCapacity()
+                    .maybeStack(1)
+                    .orNull();
+            } catch (Throwable t) {
+                t.printStackTrace();
+                return null;
+            }
         }
 
         private String resolveProviderName(Object machine) {

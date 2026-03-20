@@ -13,10 +13,10 @@ import org.lwjgl.input.Keyboard;
 
 import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.GuiContainerAccessor;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.PacketExtractIngredients;
-import com.gali.ae2_auto_pattern_upload.network.PacketExtractItem;
-import com.gali.ae2_auto_pattern_upload.network.PacketOpenCraftingAmount;
-import com.gali.ae2_auto_pattern_upload.network.PacketScrollTransfer;
+import com.gali.ae2_auto_pattern_upload.network.crafting.PacketExtractIngredients;
+import com.gali.ae2_auto_pattern_upload.network.crafting.PacketOpenCraftingAmount;
+import com.gali.ae2_auto_pattern_upload.network.inventory.PacketExtractItem;
+import com.gali.ae2_auto_pattern_upload.network.inventory.PacketScrollTransfer;
 
 import codechicken.nei.ItemPanels;
 import codechicken.nei.bookmark.BookmarkGrid;

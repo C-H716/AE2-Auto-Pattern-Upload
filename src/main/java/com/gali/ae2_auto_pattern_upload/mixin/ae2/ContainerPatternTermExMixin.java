@@ -25,7 +25,7 @@ public abstract class ContainerPatternTermExMixin {
                 .getInventoryByName("pattern"),
             0);
         if (patternSlotIN != null) {
-            // 调用refillBlankPatterns方法填充空白样板
+            // 调用 refillBlankPatterns 方法填充空白样板
             ((ContainerMEMonitorableAccessor) self).invokeRefillBlankPatterns(patternSlotIN);
         }
     }

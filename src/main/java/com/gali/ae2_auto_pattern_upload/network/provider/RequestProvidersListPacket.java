@@ -1,4 +1,4 @@
-package com.gali.ae2_auto_pattern_upload.network;
+package com.gali.ae2_auto_pattern_upload.network.provider;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,6 +9,7 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 
+import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
 import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminal;
 import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminalEx;
 import com.glodblock.github.inventory.item.IItemPatternTerminal;

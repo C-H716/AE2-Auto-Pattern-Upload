@@ -1,4 +1,4 @@
-package com.gali.ae2_auto_pattern_upload.network;
+package com.gali.ae2_auto_pattern_upload.network.inventory;
 
 import java.util.HashMap;
 import java.util.Map;

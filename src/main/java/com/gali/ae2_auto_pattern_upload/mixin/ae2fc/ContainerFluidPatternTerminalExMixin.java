@@ -74,7 +74,7 @@ public abstract class ContainerFluidPatternTerminalExMixin {
 
             if (extracted != null) {
                 if (blanks != null) {
-                    blanks.stackSize += extracted.getStackSize();
+                    blanks.stackSize += (int) extracted.getStackSize();
                 } else {
                     blanks = extracted.getItemStack();
                 }

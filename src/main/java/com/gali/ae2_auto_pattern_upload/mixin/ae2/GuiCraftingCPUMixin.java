@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.PacketOpenProviderGui;
+import com.gali.ae2_auto_pattern_upload.network.provider.PacketOpenProviderGui;
 
 import appeng.api.util.DimensionalCoord;
 import appeng.client.gui.implementations.GuiCraftingCPU;

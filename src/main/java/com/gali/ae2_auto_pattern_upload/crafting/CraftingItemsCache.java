@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.RequestCraftingItemsPacket;
+import com.gali.ae2_auto_pattern_upload.network.crafting.RequestCraftingItemsPacket;
 
 import appeng.api.storage.data.IAEItemStack;
 

@@ -1,9 +1,8 @@
-package com.gali.ae2_auto_pattern_upload.network;
+package com.gali.ae2_auto_pattern_upload.network.provider;
 
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.event.ClickEvent;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.ChatStyle;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.world.World;
@@ -135,7 +134,8 @@ public class PacketOpenProviderGui implements IMessage {
          * 发送带点击传送功能的聊天消息给玩家
          */
         private void sendTeleportMessage(EntityPlayerMP player, int x, int y, int z) {
-            ChatComponentText message = new ChatComponentText("[" + x + ", " + y + ", " + z + "]");
+            net.minecraft.util.ChatComponentText message = new net.minecraft.util.ChatComponentText(
+                "[" + x + ", " + y + ", " + z + "]");
             // 使用 /tp @p x y z 格式，确保传送到正确的位置，y+1 让玩家站在方块上方
             String tpCommand = "/tp @p " + x + " " + (y + 1) + " " + z;
             ChatStyle style = new ChatStyle().setColor(EnumChatFormatting.GREEN)
@@ -143,7 +143,8 @@ public class PacketOpenProviderGui implements IMessage {
                 .setUnderlined(true);
             message.setChatStyle(style);
 
-            ChatComponentText prefix = new ChatComponentText("供应器位置：");
+            net.minecraft.util.ChatComponentTranslation prefix = new net.minecraft.util.ChatComponentTranslation(
+                "ae2_auto_pattern_upload.info.provider_location");
             prefix.appendSibling(message);
 
             player.addChatMessage(prefix);

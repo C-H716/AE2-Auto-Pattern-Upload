@@ -1,4 +1,4 @@
-package com.gali.ae2_auto_pattern_upload.network;
+package com.gali.ae2_auto_pattern_upload.network.crafting;
 
 import java.util.ArrayList;
 import java.util.List;

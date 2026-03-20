@@ -23,7 +23,10 @@
   "client": [
     "ae2.AEBaseGuiMixin",
     "ae2.GuiCraftingCPUMixin",
+    "ae2.GuiPatternTermEncodeMixin",
+    "ae2.GuiPatternTermExEncodeMixin",
     "ae2.ItemRepoMixin",
+    "ae2fc.FCGuiEncodeTerminalMixin",
     "nei.MixinDefaultOverlayHandler",
     "nei.MixinRecipeHandlerRef",
     "nei.NEIShortcutInputHandlerMixin"
