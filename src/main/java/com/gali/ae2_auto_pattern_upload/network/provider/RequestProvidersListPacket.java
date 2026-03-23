@@ -102,14 +102,16 @@ public class RequestProvidersListPacket implements IMessage {
                         // 获取空槽位数量和是否可以装卡
                         SlotInfo slotInfo = getSlotInfo(provider);
 
-                        // 显示所有 ICraftingProvider，包括：
-                        // 1. 如果有空槽位（可以上传），正常显示
+                        // 过滤逻辑：
+                        // 1. 如果有空槽位（可以上传），显示
                         // 2. 如果没有空槽位，但可以装卡，显示（带装卡按钮）
-                        // 3. 如果没有空槽位且不能装卡，也显示（禁用状态）
-                        ids.add(id);
-                        names.add(name);
-                        emptySlots.add(slotInfo.emptySlots);
-                        canInstallCard.add(slotInfo.canInstallCard);
+                        // 3. 如果没有空槽位且不能装卡，不显示
+                        if (slotInfo.emptySlots > 0 || slotInfo.canInstallCard) {
+                            ids.add(id);
+                            names.add(name);
+                            emptySlots.add(slotInfo.emptySlots);
+                            canInstallCard.add(slotInfo.canInstallCard);
+                        }
                     }
                 }
 

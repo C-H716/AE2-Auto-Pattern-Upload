@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "mixins.ae2_auto_pattern_upload.refmap.json",
   "mixins": [
+    "ae2.BlockQuantumLinkChamberMixin",
     "ae2.ContainerPatternTermExMixin",
     "ae2.ContainerPatternTermMixin",
     "ae2.MixinAEBaseTileBlock",
@@ -14,6 +15,7 @@
     "ae2.accessor.ContainerMEMonitorableAccessor",
     "ae2.accessor.ContainerWirelessCraftingTerminalAccessor",
     "ae2.accessor.GuiContainerAccessor",
+    "ae2.accessor.QuantumClusterAccessor",
     "ae2fc.ContainerFluidPatternTerminalExMixin",
     "ae2fc.ContainerFluidPatternTerminalMixin",
     "gt.DisableDebuff_Mixin",
@@ -25,6 +27,7 @@
     "ae2.GuiCraftingCPUMixin",
     "ae2.GuiPatternTermEncodeMixin",
     "ae2.GuiPatternTermExEncodeMixin",
+    "ae2.ItemMultiMaterialMixin",
     "ae2.ItemRepoMixin",
     "ae2fc.FCGuiEncodeTerminalMixin",
     "nei.MixinDefaultOverlayHandler",

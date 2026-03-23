@@ -307,86 +307,46 @@ public class GuiProviderSelect extends GuiScreen {
     }
 
     private void buildGroups() {
-        // 第一步：按名称分组，收集所有供应器
-        Map<String, List<ProviderInfo>> providersByName = new LinkedHashMap<>();
+        Map<String, GroupEntry> map = new LinkedHashMap<String, GroupEntry>();
         for (int i = 0; i < names.size(); i++) {
             String rawName = names.get(i);
+            // 将 Component JSON 转换为本地化文本用于分组键
             String name = deserializeComponentName(rawName);
             long id = ids.get(i);
             int slots = emptySlots.get(i);
             boolean canInstall = canInstallCard.get(i);
 
-            providersByName.computeIfAbsent(name, k -> new ArrayList<>())
-                .add(new ProviderInfo(id, name, slots, canInstall));
+            GroupEntry entry = map.get(name);
+            if (entry == null) {
+                entry = new GroupEntry();
+                entry.name = name;
+                entry.pinned = pinnedProviders.contains(name);
+                entry.autoUploadTarget = AutoUploadTargetConfig.isTarget(name);
+                map.put(name, entry);
+            }
+            entry.count++;
+            entry.totalSlots += Math.max(0, slots);
+            // 只要有一个可以装卡，就标记为可以装卡
+            if (canInstall) {
+                entry.canInstallCard = true;
+            }
+            // 优先选择剩余槽位少的接口（但必须有至少1个空槽位）
+            if (entry.id == 0L) {
+                // 第一次初始化
+                entry.bestSlots = Math.max(0, slots);
+                entry.id = id;
+            } else if (slots > 0 && (entry.bestSlots <= 0 || slots < entry.bestSlots)) {
+                // 优先选择有槽位且剩余量少的接口
+                entry.bestSlots = slots;
+                entry.id = id;
+            } else if (slots <= 0 && entry.bestSlots <= 0) {
+                // 如果都没有空槽位，选择可以装卡的（用于显示装卡按钮）
+                if (canInstall && !entry.canInstallCard) {
+                    entry.bestSlots = 0;
+                    entry.id = id;
+                }
+            }
         }
-
-        // 第二步：对每个名称组应用筛选规则
-        Map<String, GroupEntry> map = new LinkedHashMap<String, GroupEntry>();
-        for (Map.Entry<String, List<ProviderInfo>> entry : providersByName.entrySet()) {
-            String name = entry.getKey();
-            List<ProviderInfo> providers = entry.getValue();
-
-            // 规则一：如果组内既有"可装卡"又有"不可装卡"，只保留"可装卡"的
-            List<ProviderInfo> canInstallList = new ArrayList<ProviderInfo>();
-            List<ProviderInfo> cannotInstallList = new ArrayList<ProviderInfo>();
-            for (ProviderInfo info : providers) {
-                if (info.canInstallCard) {
-                    canInstallList.add(info);
-                } else {
-                    cannotInstallList.add(info);
-                }
-            }
-
-            List<ProviderInfo> filteredProviders;
-            if (!canInstallList.isEmpty() && !cannotInstallList.isEmpty()) {
-                // 混合情况：只保留可装卡的
-                filteredProviders = canInstallList;
-            } else if (!canInstallList.isEmpty()) {
-                // 全部可装卡
-                filteredProviders = canInstallList;
-            } else {
-                // 规则二：全部不可装卡，只显示一个
-                filteredProviders = new ArrayList<ProviderInfo>();
-                filteredProviders.add(cannotInstallList.get(0));
-            }
-
-            // 创建 GroupEntry
-            GroupEntry groupEntry = new GroupEntry();
-            groupEntry.name = name;
-            groupEntry.pinned = pinnedProviders.contains(name);
-            groupEntry.autoUploadTarget = AutoUploadTargetConfig.isTarget(name);
-            groupEntry.count = filteredProviders.size();
-
-            // 聚合数据
-            int totalSlots = 0;
-            boolean anyCanInstall = false;
-            long selectedId = 0;
-            int bestSlots = 0;
-
-            for (ProviderInfo info : filteredProviders) {
-                totalSlots += Math.max(0, info.emptySlots);
-                if (info.canInstallCard) {
-                    anyCanInstall = true;
-                }
-
-                // 选择最佳ID（优先有空槽位的）
-                if (selectedId == 0) {
-                    selectedId = info.id;
-                    bestSlots = Math.max(0, info.emptySlots);
-                } else if (info.emptySlots > 0 && (bestSlots <= 0 || info.emptySlots < bestSlots)) {
-                    selectedId = info.id;
-                    bestSlots = info.emptySlots;
-                }
-            }
-
-            groupEntry.id = selectedId;
-            groupEntry.totalSlots = totalSlots;
-            groupEntry.bestSlots = bestSlots;
-            groupEntry.canInstallCard = anyCanInstall;
-
-            map.put(name, groupEntry);
-        }
-
         groups.clear();
         groups.addAll(map.values());
         // 按置顶状态和自然排序排序
@@ -397,24 +357,6 @@ public class GuiProviderSelect extends GuiScreen {
             // 都置顶或都不置顶，按自然排序
             return NATURAL_SORT_COMPARATOR.compare(a, b);
         });
-    }
-
-    /**
-     * 供应器信息辅助类
-     */
-    private static class ProviderInfo {
-
-        long id;
-        String name;
-        int emptySlots;
-        boolean canInstallCard;
-
-        ProviderInfo(long id, String name, int emptySlots, boolean canInstallCard) {
-            this.id = id;
-            this.name = name;
-            this.emptySlots = emptySlots;
-            this.canInstallCard = canInstallCard;
-        }
     }
 
     private void applyFilter() {
