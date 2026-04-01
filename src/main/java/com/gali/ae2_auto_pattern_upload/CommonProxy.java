@@ -1,5 +1,6 @@
 package com.gali.ae2_auto_pattern_upload;
 
+import com.gali.ae2_auto_pattern_upload.command.CommandFixPHCircuit;
 import com.gali.ae2_auto_pattern_upload.command.CommandQuantumTeleport;
 import com.gali.ae2_auto_pattern_upload.command.CommandTeleportToPlayer;
 
@@ -29,5 +30,6 @@ public class CommonProxy {
     public void serverStarting(FMLServerStartingEvent event) {
         event.registerServerCommand(new CommandQuantumTeleport());
         event.registerServerCommand(new CommandTeleportToPlayer());
+        event.registerServerCommand(new CommandFixPHCircuit());
     }
 }

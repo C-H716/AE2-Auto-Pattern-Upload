@@ -460,4 +460,24 @@ public class AEUtil {
             .bus()
             .register(new CraftingItemSetter(player, aeStack));
     }
+
+    /**
+     * 检查物品是否是无线终端
+     */
+    public static boolean isWirelessTerminal(ItemStack stack) {
+        if (stack == null) {
+            return false;
+        }
+
+        // 获取无线终端处理器
+        IWirelessTermHandler handler = AEApi.instance()
+            .registries()
+            .wireless()
+            .getWirelessTerminalHandler(stack);
+        if (handler == null) {
+            return false;
+        }
+
+        return handler.canHandle(stack);
+    }
 }
