@@ -9,6 +9,8 @@ import org.spongepowered.asm.mixin.Overwrite;
 
 import com.gali.ae2_auto_pattern_upload.util.CircuitUtils;
 
+import appeng.api.networking.crafting.ICraftingPatternDetails;
+import appeng.api.storage.data.IAEItemStack;
 import appeng.util.PatternMultiplierHelper;
 
 /**
@@ -16,6 +18,52 @@ import appeng.util.PatternMultiplierHelper;
  */
 @Mixin(value = PatternMultiplierHelper.class, remap = false)
 public abstract class PatternMultiplierHelperMixin {
+
+    /**
+     * @author AE2 Auto Pattern Upload
+     * @reason Skip programming circuits when calculating max bit divider
+     */
+    @Overwrite
+    public static int getMaxBitDivider(ICraftingPatternDetails details) {
+        // limit to 2B per item in pattern
+        int maxDiv = 30;
+        for (IAEItemStack input : details.getInputs()) {
+            if (input == null) continue;
+
+            // 跳过编程器电路
+            ItemStack stack = input.getItemStack();
+            if (CircuitUtils.isProgrammingCircuit(stack)) {
+                continue;
+            }
+
+            long size = input.getStackSize();
+            int max = 0;
+            while ((size & 1) == 0) {
+                size >>= 1;
+                max++;
+            }
+            if (max < maxDiv) maxDiv = max;
+        }
+        for (IAEItemStack out : details.getOutputs()) {
+            if (out == null) continue;
+
+            // 跳过编程器电路
+            ItemStack stack = out.getItemStack();
+            if (CircuitUtils.isProgrammingCircuit(stack)) {
+                continue;
+            }
+
+            long size = out.getStackSize();
+            int max = 0;
+            while ((size & 1) == 0) {
+                size >>= 1;
+                max++;
+            }
+            if (max < maxDiv) maxDiv = max;
+        }
+
+        return maxDiv;
+    }
 
     /**
      * @author AE2 Auto Pattern Upload
