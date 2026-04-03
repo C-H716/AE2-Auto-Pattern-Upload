@@ -30,6 +30,7 @@ import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionHost;
 import appeng.api.networking.storage.IStorageGrid;
 import appeng.api.storage.data.IAEItemStack;
+import appeng.api.util.IInterfaceViewable;
 import appeng.container.implementations.ContainerPatternTerm;
 import appeng.container.implementations.ContainerPatternTermEx;
 import appeng.container.slot.SlotRestrictedInput;
@@ -348,10 +349,26 @@ public class AutoUploadPatternPacket implements IMessage {
         }
 
         private boolean hasEmptySlot(ICraftingProvider provider) {
+            // 优先检查 AE2 标准接口（IInterfaceHost）
             if (provider instanceof IInterfaceHost host) {
                 IInventory patterns = host.getPatterns();
                 if (patterns != null) {
                     int availableSlots = host.rows() * host.rowSize();
+                    int limit = Math.min(availableSlots, patterns.getSizeInventory());
+                    for (int i = 0; i < limit; i++) {
+                        ItemStack slot = patterns.getStackInSlot(i);
+                        if (slot == null || slot.stackSize <= 0) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            // 检查 GT5 和 Programmable Hatches 的接口（IInterfaceViewable）
+            if (provider instanceof IInterfaceViewable viewable) {
+                IInventory patterns = viewable.getPatterns();
+                if (patterns != null) {
+                    int availableSlots = viewable.rows() * viewable.rowSize();
                     int limit = Math.min(availableSlots, patterns.getSizeInventory());
                     for (int i = 0; i < limit; i++) {
                         ItemStack slot = patterns.getStackInSlot(i);
@@ -539,20 +556,30 @@ public class AutoUploadPatternPacket implements IMessage {
 
         private String resolveProviderName(Object machine) {
             String name = null;
-            if (machine instanceof TileEntity tile) {
-                try {
-                    if (tile.getBlockType() != null) {
-                        name = tile.getBlockType()
-                            .getLocalizedName();
-                    }
-                } catch (Throwable ignored) {}
 
-                if (machine instanceof IInventory inv) {
+            // 优先检查 IInterfaceViewable 的 getName() 方法 (GT5 和 Programmable Hatches 使用)
+            if (machine instanceof IInterfaceViewable viewable) {
+                try {
+                    name = viewable.getName();
+                } catch (Throwable ignored) {}
+            }
+
+            if (name == null || name.isEmpty()) {
+                if (machine instanceof TileEntity tile) {
                     try {
-                        if (inv.hasCustomInventoryName()) {
-                            name = inv.getInventoryName();
+                        if (tile.getBlockType() != null) {
+                            name = tile.getBlockType()
+                                .getLocalizedName();
                         }
                     } catch (Throwable ignored) {}
+
+                    if (machine instanceof IInventory inv) {
+                        try {
+                            if (inv.hasCustomInventoryName()) {
+                                name = inv.getInventoryName();
+                            }
+                        } catch (Throwable ignored) {}
+                    }
                 }
             }
             if (machine instanceof AEBasePart part) {
@@ -628,12 +655,27 @@ public class AutoUploadPatternPacket implements IMessage {
         }
 
         private boolean insertPatternIntoProvider(ICraftingProvider provider, ItemStack pattern) {
+            // 优先处理 AE2 标准接口（IInterfaceHost）
             if (provider instanceof IInterfaceHost host) {
                 IInventory patterns = host.getPatterns();
                 if (patterns != null) {
                     int availableSlots = host.rows() * host.rowSize();
                     if (insertIntoPatternInventory(patterns, pattern, availableSlots)) {
                         host.saveChanges();
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // 处理 GT5 和 Programmable Hatches 的接口（IInterfaceViewable）
+            if (provider instanceof IInterfaceViewable viewable) {
+                IInventory patterns = viewable.getPatterns();
+                if (patterns != null) {
+                    int availableSlots = viewable.rows() * viewable.rowSize();
+                    if (insertIntoPatternInventory(patterns, pattern, availableSlots)) {
+                        // IInterfaceViewable 没有 saveChanges 方法，直接标记脏数据
+                        patterns.markDirty();
                         return true;
                     }
                 }

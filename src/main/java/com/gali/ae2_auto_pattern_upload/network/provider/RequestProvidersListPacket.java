@@ -21,6 +21,7 @@ import appeng.api.networking.IGridNode;
 import appeng.api.networking.IMachineSet;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionHost;
+import appeng.api.util.IInterfaceViewable;
 import appeng.container.implementations.ContainerPatternTerm;
 import appeng.container.implementations.ContainerPatternTermEx;
 import appeng.helpers.IInterfaceHost;
@@ -164,6 +165,7 @@ public class RequestProvidersListPacket implements IMessage {
          * 获取接口的槽位信息
          */
         private SlotInfo getSlotInfo(ICraftingProvider provider) {
+            // 优先检查 IInterfaceHost (AE2 标准接口)
             if (provider instanceof IInterfaceHost host) {
                 IInventory patterns = host.getPatterns();
                 if (patterns != null) {
@@ -182,6 +184,25 @@ public class RequestProvidersListPacket implements IMessage {
                     boolean canInstallCard = canInstallCapacityCard(host);
 
                     return new SlotInfo(empty, canInstallCard);
+                }
+            }
+            // 检查 IInterfaceViewable (GT5 和 Programmable Hatches 使用的接口)
+            if (provider instanceof IInterfaceViewable viewable) {
+                IInventory patterns = viewable.getPatterns();
+                if (patterns != null) {
+                    // 计算实际可用的槽位数量
+                    int availableSlots = viewable.rows() * viewable.rowSize();
+                    int limit = Math.min(availableSlots, patterns.getSizeInventory());
+                    int empty = 0;
+                    for (int i = 0; i < limit; i++) {
+                        ItemStack slot = patterns.getStackInSlot(i);
+                        if (slot == null || slot.stackSize <= 0) {
+                            empty++;
+                        }
+                    }
+
+                    // IInterfaceViewable 不支持样板容量卡升级
+                    return new SlotInfo(empty, false);
                 }
             }
             if (provider instanceof IInventory inv) {
@@ -242,20 +263,30 @@ public class RequestProvidersListPacket implements IMessage {
 
         private String resolveProviderName(Object machine) {
             String name = null;
-            if (machine instanceof TileEntity tile) {
-                try {
-                    if (tile.getBlockType() != null) {
-                        name = tile.getBlockType()
-                            .getLocalizedName();
-                    }
-                } catch (Throwable ignored) {}
 
-                if (machine instanceof IInventory inv) {
+            // 优先检查 IInterfaceViewable 的 getName() 方法 (GT5 和 Programmable Hatches 使用)
+            if (machine instanceof IInterfaceViewable viewable) {
+                try {
+                    name = viewable.getName();
+                } catch (Throwable ignored) {}
+            }
+
+            if (name == null || name.isEmpty()) {
+                if (machine instanceof TileEntity tile) {
                     try {
-                        if (inv.hasCustomInventoryName()) {
-                            name = inv.getInventoryName();
+                        if (tile.getBlockType() != null) {
+                            name = tile.getBlockType()
+                                .getLocalizedName();
                         }
                     } catch (Throwable ignored) {}
+
+                    if (machine instanceof IInventory inv) {
+                        try {
+                            if (inv.hasCustomInventoryName()) {
+                                name = inv.getInventoryName();
+                            }
+                        } catch (Throwable ignored) {}
+                    }
                 }
             }
             if (machine instanceof AEBasePart part) {

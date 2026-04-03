@@ -20,6 +20,7 @@ import appeng.api.networking.IGridNode;
 import appeng.api.networking.IMachineSet;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionHost;
+import appeng.api.util.IInterfaceViewable;
 import appeng.container.implementations.ContainerPatternTerm;
 import appeng.container.implementations.ContainerPatternTermEx;
 import appeng.container.slot.SlotRestrictedInput;
@@ -192,7 +193,7 @@ public class UploadPatternPacket implements IMessage {
         }
 
         private boolean insertPatternIntoProvider(ICraftingProvider provider, ItemStack pattern) {
-            // 优先处理接口（IInterfaceHost），确保只插入到编码样板槽（patterns）
+            // 优先处理 AE2 标准接口（IInterfaceHost），确保只插入到编码样板槽（patterns）
             if (provider instanceof IInterfaceHost host) {
                 IInventory patterns = host.getPatterns();
                 if (patterns != null) {
@@ -204,6 +205,22 @@ public class UploadPatternPacket implements IMessage {
                     }
                 }
                 // 接口的样板槽满了，直接返回 false，不要尝试放到物品槽
+                return false;
+            }
+
+            // 处理 GT5 和 Programmable Hatches 的接口（IInterfaceViewable）
+            if (provider instanceof IInterfaceViewable viewable) {
+                IInventory patterns = viewable.getPatterns();
+                if (patterns != null) {
+                    // 计算实际可用的槽位数量
+                    int availableSlots = viewable.rows() * viewable.rowSize();
+                    if (insertIntoPatternInventory(patterns, pattern, availableSlots)) {
+                        // IInterfaceViewable 没有 saveChanges 方法，直接标记脏数据
+                        patterns.markDirty();
+                        return true;
+                    }
+                }
+                // 样板槽满了，直接返回 false
                 return false;
             }
 
