@@ -14,7 +14,7 @@ import appeng.api.storage.data.IAEItemStack;
 /**
  * 缓存当前网络中CPU正在合成的物品
  * 正在合成的物品一直显示前置
- * 合成完成的物品延迟5秒后才取消前置显示
+ * 合成完成的物品延迟10秒后才取消前置显示
  */
 public class CraftingItemsCache {
 
@@ -22,7 +22,7 @@ public class CraftingItemsCache {
     private static final Map<Integer, CraftingItemInfo> craftingItemsMap = new HashMap<>();
     private static long lastUpdateTime = 0;
     private static final long UPDATE_INTERVAL = 1000; // 每1000ms向服务器请求更新一次
-    private static final long COMPLETED_ITEM_DELAY = 10000; // 合成完成后延迟5秒才取消显示
+    private static final long COMPLETED_ITEM_DELAY = 10000; // 合成完成后延迟10秒才取消显示
 
     /**
      * 存储物品信息的内部类
@@ -63,14 +63,14 @@ public class CraftingItemsCache {
         /**
          * 检查是否应该显示前置
          * 正在合成的：一直显示
-         * 已完成的：5秒内显示
+         * 已完成的：10秒内显示
          */
         boolean shouldShow(long currentTime) {
             if (!isCompleted) {
                 // 正在合成中，一直显示
                 return true;
             }
-            // 已完成的，5秒内继续显示
+            // 已完成的，10秒内继续显示
             return currentTime - completedTime < COMPLETED_ITEM_DELAY;
         }
     }
@@ -125,7 +125,7 @@ public class CraftingItemsCache {
             } else {
                 // 物品不再在合成列表中
                 if (info.isCompleted) {
-                    // 已标记完成的，检查是否超过5秒
+                    // 已标记完成的，检查是否超过10秒
                     if (currentTime - info.completedTime >= COMPLETED_ITEM_DELAY) {
                         iterator.remove();
                     }
@@ -190,7 +190,11 @@ public class CraftingItemsCache {
         }
 
         long currentTime = System.currentTimeMillis();
-        return info.shouldShow(currentTime);
+        if (!info.shouldShow(currentTime)) {
+            craftingItemsMap.remove(hash);
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -203,15 +207,23 @@ public class CraftingItemsCache {
 
     /**
      * 当玩家打开终端时调用
-     * 重置所有已完成物品的计时器，确保玩家看到后才启动5秒倒计时
+     * 只重置仍在显示窗口内的已完成物品，已经过期的物品直接清除。
      */
     public static void onTerminalOpened() {
         long currentTime = System.currentTimeMillis();
 
-        for (CraftingItemInfo info : craftingItemsMap.values()) {
+        Iterator<Map.Entry<Integer, CraftingItemInfo>> iterator = craftingItemsMap.entrySet()
+            .iterator();
+        while (iterator.hasNext()) {
+            CraftingItemInfo info = iterator.next()
+                .getValue();
             if (info.isCompleted) {
-                // 重置已完成物品的计时器，让玩家看到后再开始倒计时
-                info.completedTime = currentTime;
+                if (!info.shouldShow(currentTime)) {
+                    iterator.remove();
+                } else {
+                    // 仍在10秒显示窗口内，重新打开终端后让玩家有完整时间看到它。
+                    info.completedTime = currentTime;
+                }
             }
         }
     }

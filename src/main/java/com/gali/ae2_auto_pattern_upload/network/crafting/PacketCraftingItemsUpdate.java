@@ -1,11 +1,16 @@
 package com.gali.ae2_auto_pattern_upload.network.crafting;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.Set;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiScreen;
+
 import com.gali.ae2_auto_pattern_upload.crafting.CraftingItemsCache;
 
+import appeng.api.storage.data.IDisplayRepo;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.util.item.AEItemStack;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -65,8 +70,38 @@ public class PacketCraftingItemsUpdate implements IMessage {
 
         @Override
         public IMessage onMessage(PacketCraftingItemsUpdate message, MessageContext ctx) {
-            // 直接在主线程更新缓存
             CraftingItemsCache.updateFromServer(message.getCraftingItems());
+            refreshCurrentTerminalRepo();
+            return null;
+        }
+
+        private void refreshCurrentTerminalRepo() {
+            GuiScreen screen = Minecraft.getMinecraft().currentScreen;
+            if (screen == null) {
+                return;
+            }
+
+            // 强制刷新当前打开的终端
+            IDisplayRepo repo = findRepo(screen);
+            if (repo != null) {
+                repo.updateView();
+            }
+        }
+
+        private IDisplayRepo findRepo(GuiScreen screen) {
+            Class<?> currentClass = screen.getClass();
+            while (currentClass != null) {
+                try {
+                    Field repoField = currentClass.getDeclaredField("repo");
+                    repoField.setAccessible(true);
+                    Object repo = repoField.get(screen);
+                    return repo instanceof IDisplayRepo ? (IDisplayRepo) repo : null;
+                } catch (NoSuchFieldException ignored) {
+                    currentClass = currentClass.getSuperclass();
+                } catch (Throwable ignored) {
+                    return null;
+                }
+            }
             return null;
         }
     }
