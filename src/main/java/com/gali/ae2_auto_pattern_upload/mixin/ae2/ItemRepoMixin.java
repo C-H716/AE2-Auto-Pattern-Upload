@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.gali.ae2_auto_pattern_upload.crafting.CraftingItemsCache;
 
 import appeng.api.storage.data.IAEItemStack;
+import appeng.api.storage.data.IAEStack;
 import appeng.client.me.ItemRepo;
 
 /**
@@ -23,33 +24,30 @@ public abstract class ItemRepoMixin {
 
     @Final
     @Shadow
-    private ArrayList<IAEItemStack> view;
+    private ArrayList<IAEStack<?>> view;
 
     /**
      * Inject after the normal sorting to re-sort with crafting items at the top
      * 在dsp.clear()之前执行，即在所有排序完成后
      */
-    @Inject(method = "updateView", at = @At(value = "INVOKE", target = "Ljava/util/ArrayList;clear()V", ordinal = 1))
+    @Inject(method = "updateView", at = @At("RETURN"))
     private void onUpdateView(CallbackInfo ci) {
-        // 在排序后，将正在合成的物品排到最前面
         if (this.view != null && !this.view.isEmpty()) {
-            this.view.sort((o1, o2) -> {
-                boolean isCrafting1 = CraftingItemsCache.isCrafting(o1);
-                boolean isCrafting2 = CraftingItemsCache.isCrafting(o2);
+            this.view.sort((firstStack, secondStack) -> {
+                boolean firstCrafting = firstStack instanceof IAEItemStack
+                    && CraftingItemsCache.isCrafting((IAEItemStack) firstStack);
+                boolean secondCrafting = secondStack instanceof IAEItemStack
+                    && CraftingItemsCache.isCrafting((IAEItemStack) secondStack);
 
-                // 如果两个物品都是正在合成的，保持原有顺序
-                if (isCrafting1 && isCrafting2) {
+                if (firstCrafting && secondCrafting) {
                     return 0;
                 }
-                // 如果只有o1正在合成，o1排在前面
-                if (isCrafting1) {
+                if (firstCrafting) {
                     return -1;
                 }
-                // 如果只有o2正在合成，o2排在前面
-                if (isCrafting2) {
+                if (secondCrafting) {
                     return 1;
                 }
-                // 都不是正在合成的，保持原有顺序
                 return 0;
             });
         }

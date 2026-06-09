@@ -5,14 +5,11 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
 import net.p455w0rd.wirelesscraftingterminal.api.IWirelessCraftingTermHandler;
-import net.p455w0rd.wirelesscraftingterminal.common.WCTGuiHandler;
 import net.p455w0rd.wirelesscraftingterminal.common.container.ContainerWirelessCraftingTerminal;
-import net.p455w0rd.wirelesscraftingterminal.helpers.WirelessTerminalGuiObject;
-import net.p455w0rd.wirelesscraftingterminal.reference.Reference;
+import net.p455w0rd.wirelesscraftingterminal.helpers.WTCGuiObject;
 
 import com.gali.ae2_auto_pattern_upload.MyMod;
 import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.AEBaseContainerAccessor;
-import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.ContainerWirelessCraftingTerminalAccessor;
 
 import appeng.api.AEApi;
 import appeng.api.config.SecurityPermissions;
@@ -25,8 +22,8 @@ import appeng.api.networking.storage.IStorageGrid;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.container.AEBaseContainer;
 import appeng.container.implementations.ContainerCraftAmount;
-import appeng.container.implementations.ContainerWirelessTerm;
 import appeng.core.sync.GuiBridge;
+import appeng.helpers.WirelessTerminalGuiObject;
 import appeng.util.Platform;
 import appeng.util.item.AEItemStack;
 
@@ -40,17 +37,9 @@ public class AEUtil {
      */
     public static boolean checkWirelessRange(AEBaseContainer container) {
         try {
-            // 检查是否是无线终端容器
-            if (container instanceof ContainerWirelessTerm wirelessContainer) {
-                return !wirelessContainer.getWirelessTerminalGUIObject()
-                    .rangeCheck();
-            }
-
-            // 检查是否是无线合成终端容器
-            if (container instanceof ContainerWirelessCraftingTerminal craftingTerminal) {
-                // 使用 Mixin 调用 isInRange 方法
-                ContainerWirelessCraftingTerminalAccessor accessor = (ContainerWirelessCraftingTerminalAccessor) craftingTerminal;
-                return !accessor.invokeIsInRange();
+            IActionHost actionHost = getActionHost(container);
+            if (actionHost instanceof WirelessTerminalGuiObject terminalObject) {
+                return !terminalObject.rangeCheck();
             }
         } catch (Throwable e) {
             MyMod.LOG.debug("Failed to check wireless range", e);
@@ -67,11 +56,6 @@ public class AEUtil {
             Object target = container.getTarget();
             if (target instanceof IActionHost) {
                 return (IActionHost) target;
-            }
-
-            // 特殊处理 AE2 无线终端容器
-            if (container instanceof ContainerWirelessTerm wirelessContainer) {
-                return wirelessContainer.getWirelessTerminalGUIObject();
             }
 
             // 特殊处理无线合成终端容器 (Wireless Crafting Terminal)
@@ -207,15 +191,8 @@ public class AEUtil {
 
                 // 检查是否是 WCT 的无线终端（支持量子卡）
                 if (handler instanceof IWirelessCraftingTermHandler) {
-                    // 使用 WCT 的 WirelessTerminalGuiObject，因为它支持量子卡
-                    WirelessTerminalGuiObject terminalObject = new WirelessTerminalGuiObject(
-                        handler,
-                        stack,
-                        player,
-                        player.worldObj,
-                        i,
-                        0,
-                        0);
+                    // 使用 WCT 的 WTCGuiObject，因为它支持量子卡
+                    WTCGuiObject terminalObject = new WTCGuiObject(handler, stack, player, player.worldObj, i, 0, 0, i);
 
                     // 检查范围 - WCT 的 rangeCheck 会自动处理量子卡的情况
                     if (!terminalObject.rangeCheck()) {
@@ -308,15 +285,8 @@ public class AEUtil {
             try {
                 // 检查是否是 WCT 的无线终端（支持量子卡）
                 if (handler instanceof IWirelessCraftingTermHandler) {
-                    // 使用 WCT 的 WirelessTerminalGuiObject，因为它支持量子卡
-                    WirelessTerminalGuiObject terminalObject = new WirelessTerminalGuiObject(
-                        handler,
-                        stack,
-                        player,
-                        player.worldObj,
-                        i,
-                        0,
-                        0);
+                    // 使用 WCT 的 WTCGuiObject，因为它支持量子卡
+                    WTCGuiObject terminalObject = new WTCGuiObject(handler, stack, player, player.worldObj, i, 0, 0, i);
 
                     // 检查范围 - WCT 的 rangeCheck 会自动处理量子卡的情况
                     if (!terminalObject.rangeCheck()) {
@@ -363,16 +333,12 @@ public class AEUtil {
 
         // 尝试从AE容器获取网格
         if (container instanceof AEBaseContainer baseContainer) {
-            // 获取能量源和存储
-            if (baseContainer.getPowerSource() != null && baseContainer.getCellInventory() != null) {
-                // 获取网格
-                grid = getGrid(baseContainer);
+            grid = getGrid(baseContainer);
 
-                if (grid != null) {
-                    // 检查无线终端范围
-                    if (checkWirelessRange(baseContainer)) {
-                        return null;
-                    }
+            if (grid != null) {
+                // 检查无线终端范围
+                if (checkWirelessRange(baseContainer)) {
+                    return null;
                 }
             }
         }
@@ -427,13 +393,13 @@ public class AEUtil {
                 return;
             }
 
-            // 检查是否是 WCT 的无线终端
+            // 检查是否是无线终端
             if (actionHost instanceof WirelessTerminalGuiObject) {
-                // 使用 WCT 的方式打开合成界面
-                int x = (int) player.posX;
-                int y = (int) player.posY;
-                int z = (int) player.posZ;
-                WCTGuiHandler.launchGui(Reference.GUI_CRAFT_AMOUNT, player, player.worldObj, x, y, z);
+                Platform.openGUI(
+                    player,
+                    null,
+                    net.minecraftforge.common.util.ForgeDirection.UNKNOWN,
+                    GuiBridge.GUI_CRAFTING_AMOUNT);
 
                 // 延迟设置要合成的物品（确保容器已打开）
                 scheduleSetCraftingItem(player, aeStack);

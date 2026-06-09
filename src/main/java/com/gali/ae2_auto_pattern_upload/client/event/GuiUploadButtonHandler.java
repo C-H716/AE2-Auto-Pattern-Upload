@@ -1,20 +1,16 @@
 package com.gali.ae2_auto_pattern_upload.client.event;
 
+import appeng.client.gui.implementations.GuiPatternTerm;
+import appeng.client.gui.implementations.GuiPatternTermEx;
+import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.GuiContainerAccessor;
+import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
+import com.gali.ae2_auto_pattern_upload.network.provider.RequestProvidersListPacket;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
-
-import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.GuiContainerAccessor;
-import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.provider.RequestProvidersListPacket;
-import com.glodblock.github.client.gui.GuiFluidPatternTerminal;
-import com.glodblock.github.client.gui.GuiFluidPatternTerminalEx;
-
-import appeng.client.gui.implementations.GuiPatternTerm;
-import appeng.client.gui.implementations.GuiPatternTermEx;
-import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class GuiUploadButtonHandler {
 
@@ -33,17 +29,14 @@ public class GuiUploadButtonHandler {
         }
 
         // 兼容样板终端与增广样板终端，两者布局一致，共享同一按钮位置
-        if (!(gui instanceof GuiPatternTerm) && !(gui instanceof GuiPatternTermEx)
-            && !(gui instanceof GuiFluidPatternTerminal)
-            && !(gui instanceof GuiFluidPatternTerminalEx)) {
+        if (!(gui instanceof GuiPatternTerm) && !(gui instanceof GuiPatternTermEx)) {
             return;
         }
 
-        if (!(gui instanceof GuiContainer)) {
+        if (!(gui instanceof GuiContainer container)) {
             return;
         }
 
-        GuiContainer container = (GuiContainer) gui;
         GuiContainerAccessor accessor = (GuiContainerAccessor) gui;
 
         // 获取编码终端ui界面的坐标信息

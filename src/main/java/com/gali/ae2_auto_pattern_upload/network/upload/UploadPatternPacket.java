@@ -7,11 +7,9 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 
-import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminal;
-import com.glodblock.github.client.gui.container.ContainerFluidPatternTerminalEx;
-import com.glodblock.github.client.gui.container.base.FCContainerEncodeTerminal;
+import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.AEBaseContainerAccessor;
+import com.glodblock.github.client.gui.container.ContainerFluidPatternEncoder;
 import com.glodblock.github.common.item.ItemFluidEncodedPattern;
-import com.glodblock.github.inventory.item.IItemPatternTerminal;
 
 import appeng.api.AEApi;
 import appeng.api.networking.IGrid;
@@ -130,18 +128,8 @@ public class UploadPatternPacket implements IMessage {
             if (container instanceof ContainerPatternTermEx termEx) {
                 return termEx.getPatternTerminal();
             }
-            if (container instanceof ContainerFluidPatternTerminal fluidTerm) {
-                return fromPatternTerminal(fluidTerm.getPatternTerminal());
-            }
-            if (container instanceof ContainerFluidPatternTerminalEx fluidTermEx) {
-                return fromPatternTerminal(fluidTermEx.getPatternTerminal());
-            }
-            return null;
-        }
-
-        private IActionHost fromPatternTerminal(IItemPatternTerminal terminal) {
-            if (terminal instanceof IActionHost actionHost) {
-                return actionHost;
+            if (container instanceof ContainerFluidPatternEncoder) {
+                return ((AEBaseContainerAccessor) container).invokeGetActionHost();
             }
             return null;
         }
@@ -158,10 +146,15 @@ public class UploadPatternPacket implements IMessage {
                     field.setAccessible(true);
                     return (SlotRestrictedInput) field.get(termEx);
                 }
-                if (container instanceof FCContainerEncodeTerminal fcContainer) {
-                    Field field = FCContainerEncodeTerminal.class.getDeclaredField("patternSlotOUT");
-                    field.setAccessible(true);
-                    return (SlotRestrictedInput) field.get(fcContainer);
+                if (container instanceof ContainerFluidPatternEncoder fluidEncoder) {
+                    IInventory inventory = fluidEncoder.getTile()
+                        .getInventory();
+                    for (Object slotObject : fluidEncoder.inventorySlots) {
+                        if (slotObject instanceof SlotRestrictedInput slot && slot.inventory == inventory
+                            && slot.getSlotIndex() == 1) {
+                            return slot;
+                        }
+                    }
                 }
             } catch (Exception ignored) {}
             return null;
