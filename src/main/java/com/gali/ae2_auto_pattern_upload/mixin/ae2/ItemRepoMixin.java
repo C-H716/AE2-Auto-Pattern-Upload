@@ -3,6 +3,8 @@ package com.gali.ae2_auto_pattern_upload.mixin.ae2;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import net.minecraft.item.ItemStack;
+
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -18,7 +20,6 @@ import appeng.api.storage.data.IAEItemStack;
 import appeng.api.storage.data.IAEStack;
 import appeng.client.gui.widgets.IScrollSource;
 import appeng.client.me.ItemRepo;
-import net.minecraft.item.ItemStack;
 
 @Mixin(value = ItemRepo.class, remap = false)
 public abstract class ItemRepoMixin {
@@ -53,7 +54,8 @@ public abstract class ItemRepoMixin {
 
         // 先保留 AE2 原本的过滤和排序结果，再把正在合成的物品移入独立置顶区。
         Iterator<IAEStack<?>> iterator = this.view.iterator();
-        while (iterator.hasNext() && ae2_auto_pattern_upload$pinnedRow.size() < ae2_auto_pattern_upload$MAX_PINNED_ROW_SIZE) {
+        while (iterator.hasNext()
+            && ae2_auto_pattern_upload$pinnedRow.size() < ae2_auto_pattern_upload$MAX_PINNED_ROW_SIZE) {
             IAEStack<?> stack = iterator.next();
             if (stack instanceof IAEItemStack && CraftingItemsCache.isCrafting((IAEItemStack) stack)) {
                 ae2_auto_pattern_upload$pinnedRow.add(stack);

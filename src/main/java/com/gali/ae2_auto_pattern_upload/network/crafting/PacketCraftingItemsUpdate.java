@@ -10,8 +10,8 @@ import net.minecraft.client.gui.GuiScreen;
 
 import com.gali.ae2_auto_pattern_upload.crafting.CraftingItemsCache;
 
-import appeng.api.storage.data.IDisplayRepo;
 import appeng.api.storage.data.IAEItemStack;
+import appeng.api.storage.data.IDisplayRepo;
 import appeng.util.item.AEItemStack;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;

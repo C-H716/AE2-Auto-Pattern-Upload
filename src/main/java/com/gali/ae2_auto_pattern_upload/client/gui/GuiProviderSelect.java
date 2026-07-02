@@ -1,32 +1,5 @@
 package com.gali.ae2_auto_pattern_upload.client.gui;
 
-import com.gali.ae2_auto_pattern_upload.config.AutoUploadTargetConfig;
-import com.gali.ae2_auto_pattern_upload.network.InstallCapacityCardPacket;
-import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.upload.UploadPatternPacket;
-import com.gali.ae2_auto_pattern_upload.util.RecipeNameUtil;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonSyntaxException;
-import cpw.mods.fml.common.Loader;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.gui.GuiTextField;
-import net.minecraft.nbt.JsonToNBT;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.ChatComponentTranslation;
-import net.minecraft.util.IChatComponent;
-import net.minecraft.util.StatCollector;
-import net.moecraft.nechar.NecharUtils;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -42,6 +15,35 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.nbt.JsonToNBT;
+import net.minecraft.nbt.NBTBase;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraft.util.IChatComponent;
+import net.minecraft.util.StatCollector;
+import net.moecraft.nechar.NecharUtils;
+
+import com.gali.ae2_auto_pattern_upload.config.AutoUploadTargetConfig;
+import com.gali.ae2_auto_pattern_upload.network.InstallCapacityCardPacket;
+import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
+import com.gali.ae2_auto_pattern_upload.network.upload.UploadPatternPacket;
+import com.gali.ae2_auto_pattern_upload.util.RecipeNameUtil;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSyntaxException;
+
+import cpw.mods.fml.common.Loader;
 
 /**
  * 供应器选择界面，移植自 1.12.2 版本，兼容 1.7.10。

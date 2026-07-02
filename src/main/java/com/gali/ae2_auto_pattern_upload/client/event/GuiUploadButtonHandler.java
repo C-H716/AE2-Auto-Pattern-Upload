@@ -1,16 +1,18 @@
 package com.gali.ae2_auto_pattern_upload.client.event;
 
-import appeng.client.gui.implementations.GuiPatternTerm;
-import appeng.client.gui.implementations.GuiPatternTermEx;
-import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.GuiContainerAccessor;
-import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.provider.RequestProvidersListPacket;
-import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
+
+import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.GuiContainerAccessor;
+import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
+import com.gali.ae2_auto_pattern_upload.network.provider.RequestProvidersListPacket;
+
+import appeng.client.gui.implementations.GuiPatternTerm;
+import appeng.client.gui.implementations.GuiPatternTermEx;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class GuiUploadButtonHandler {
 
