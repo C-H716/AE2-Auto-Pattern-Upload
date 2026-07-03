@@ -1,13 +1,5 @@
 package com.gali.ae2_auto_pattern_upload.network.provider;
 
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.event.ClickEvent;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ChatStyle;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.ForgeDirection;
-
 import appeng.api.parts.IPart;
 import appeng.api.parts.IPartHost;
 import appeng.api.util.DimensionalCoord;
@@ -19,7 +11,19 @@ import appeng.util.Platform;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
+import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
+import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.event.ClickEvent;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraft.util.ChatStyle;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.world.World;
+import net.minecraftforge.common.util.ForgeDirection;
+import reobf.proghatches.gt.metatileentity.DualInputHatch;
 
 /**
  * 打开供应器(Interface)界面的数据包
@@ -70,49 +74,39 @@ public class PacketOpenProviderGui implements IMessage {
                 return null;
             }
 
-            // 检查玩家所在维度
             if (player.worldObj.provider.dimensionId != message.dimension) {
                 return null;
             }
 
-            // 获取世界
             World world = player.worldObj;
             if (world == null) {
                 return null;
             }
 
-            // 获取位置
             int x = message.x;
             int y = message.y;
             int z = message.z;
             ForgeDirection side = ForgeDirection.getOrientation(message.sideOrdinal);
 
-            // 检查区块是否加载
             if (!world.blockExists(x, y, z)) {
                 return null;
             }
 
-            // 获取 TileEntity
             TileEntity te = world.getTileEntity(x, y, z);
             if (te == null) {
                 return null;
             }
 
-            // 检查是否是接口方块 (TileInterface)
             if (te instanceof TileInterface tileInterface) {
-                // 打开接口GUI
                 Platform.openGUI(player, tileInterface, side, GuiBridge.GUI_INTERFACE);
                 sendTeleportMessage(player, x, y, z);
                 return null;
             }
 
-            // 检查是否是 PartInterface (通过 IPartHost)
             if (te instanceof IPartHost partHost) {
-                // 尝试所有方向查找 PartInterface
                 for (ForgeDirection dir : ForgeDirection.VALID_DIRECTIONS) {
                     IPart part = partHost.getPart(dir);
                     if (part instanceof PartInterface partInterface) {
-                        // 打开接口GUI - 使用 TileEntity 和方向
                         Platform.openGUI(player, te, dir, GuiBridge.GUI_INTERFACE);
                         sendTeleportMessage(player, x, y, z);
                         return null;
@@ -120,30 +114,34 @@ public class PacketOpenProviderGui implements IMessage {
                 }
             }
 
-            // 检查是否实现了 IInterfaceHost 接口
             if (te instanceof IInterfaceHost interfaceHost) {
                 Platform.openGUI(player, te, side, GuiBridge.GUI_INTERFACE);
                 sendTeleportMessage(player, x, y, z);
                 return null;
             }
 
+            if (te instanceof IGregTechTileEntity gregTechTileEntity) {
+                IMetaTileEntity metaTileEntity = gregTechTileEntity.getMetaTileEntity();
+                if (metaTileEntity instanceof DualInputHatch dualInputHatch) {
+                    dualInputHatch.openGui(player);
+                    sendTeleportMessage(player, x, y, z);
+                    return null;
+                }
+            }
+
             return null;
         }
 
-        /**
-         * 发送带点击传送功能的聊天消息给玩家
-         */
         private void sendTeleportMessage(EntityPlayerMP player, int x, int y, int z) {
-            net.minecraft.util.ChatComponentText message = new net.minecraft.util.ChatComponentText(
+            ChatComponentText message = new ChatComponentText(
                 "[" + x + ", " + y + ", " + z + "]");
-            // 使用 /tp @p x y z 格式，确保传送到正确的位置，y+1 让玩家站在方块上方
             String tpCommand = "/tp @p " + x + " " + (y + 1) + " " + z;
             ChatStyle style = new ChatStyle().setColor(EnumChatFormatting.GREEN)
                 .setChatClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, tpCommand))
                 .setUnderlined(true);
             message.setChatStyle(style);
 
-            net.minecraft.util.ChatComponentTranslation prefix = new net.minecraft.util.ChatComponentTranslation(
+            ChatComponentTranslation prefix = new ChatComponentTranslation(
                 "ae2_auto_pattern_upload.info.provider_location");
             prefix.appendSibling(message);
 
