@@ -18,7 +18,8 @@
     "gt.DisableDebuff_Mixin",
     "gt.ToolVajraMixin",
     "jabba.DisableDollyDebuff_Mixin",
-    "ph.ItemProgrammingCircuitMixin"
+    "ph.ItemProgrammingCircuitMixin",
+    "ph.PatternDualInputHatchMixin"
   ],
   "client": [
     "ae2.AEBaseGuiMixin",
