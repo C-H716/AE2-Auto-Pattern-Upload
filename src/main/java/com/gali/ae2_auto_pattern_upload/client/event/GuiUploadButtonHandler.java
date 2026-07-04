@@ -1,18 +1,18 @@
 package com.gali.ae2_auto_pattern_upload.client.event;
 
+import appeng.client.gui.implementations.GuiPatternTerm;
+import com.gali.ae2_auto_pattern_upload.client.gui.UploadPatternButton;
+import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
+import com.gali.ae2_auto_pattern_upload.network.provider.RequestProvidersListPacket;
+import com.gali.ae2_auto_pattern_upload.network.upload.RecallLastUploadedPatternPacket;
+import cpw.mods.fml.common.ObfuscationReflectionHelper;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
-
-import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.GuiContainerAccessor;
-import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.provider.RequestProvidersListPacket;
-
-import appeng.client.gui.implementations.GuiPatternTerm;
-import appeng.client.gui.implementations.GuiPatternTermEx;
-import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import org.lwjgl.input.Keyboard;
 
 public class GuiUploadButtonHandler {
 
@@ -26,41 +26,31 @@ public class GuiUploadButtonHandler {
     @SubscribeEvent
     public void onInitGui(GuiScreenEvent.InitGuiEvent.Post event) {
         GuiScreen gui = event.gui;
-        if (gui == null) {
+        if (!(gui instanceof GuiPatternTerm container)) {
             return;
         }
 
-        // 兼容样板终端与增广样板终端，两者布局一致，共享同一按钮位置
-        if (!(gui instanceof GuiPatternTerm) && !(gui instanceof GuiPatternTermEx)) {
-            return;
-        }
+        int guiLeft = getGuiLeft(container);
+        int guiTop = getGuiTop(container);
+        int ySize = getYSize(container);
 
-        if (!(gui instanceof GuiContainer container)) {
-            return;
-        }
-
-        GuiContainerAccessor accessor = (GuiContainerAccessor) gui;
-
-        // 获取编码终端ui界面的坐标信息
-        int guiLeft = accessor.getGuiLeft();
-        int guiTop = accessor.getGuiTop();
-        int ySize = accessor.getYSize();
-
-        int encodeButtonX = guiLeft + 147;
+        int encodeButtonX = guiLeft + 148;
         int encodeButtonY = guiTop + ySize - 142;
 
-        int uploadBtnWidth = 12;
-        int uploadBtnHeight = 12;
-        int uploadBtnX = encodeButtonX - uploadBtnWidth;
-        int uploadBtnY = encodeButtonY + 2;
-        this.uploadButton = new GuiButton(
-            BUTTON_UPLOAD_ID,
-            uploadBtnX,
-            uploadBtnY,
-            uploadBtnWidth,
-            uploadBtnHeight,
-            "↑");
+        this.uploadButton = new UploadPatternButton(BUTTON_UPLOAD_ID, encodeButtonX - 13, encodeButtonY + 2);
         event.buttonList.add(this.uploadButton);
+    }
+
+    private int getGuiLeft(GuiContainer gui) {
+        return ObfuscationReflectionHelper.getPrivateValue(GuiContainer.class, gui, "guiLeft", "field_147003_i");
+    }
+
+    private int getGuiTop(GuiContainer gui) {
+        return ObfuscationReflectionHelper.getPrivateValue(GuiContainer.class, gui, "guiTop", "field_147009_r");
+    }
+
+    private int getYSize(GuiContainer gui) {
+        return ObfuscationReflectionHelper.getPrivateValue(GuiContainer.class, gui, "ySize", "field_146999_f");
     }
 
     @SubscribeEvent
@@ -69,8 +59,16 @@ public class GuiUploadButtonHandler {
             return;
         }
         if (event.button.id == BUTTON_UPLOAD_ID && event.button == uploadButton) {
-            ModNetwork.CHANNEL.sendToServer(new RequestProvidersListPacket());
+            if (isShiftKeyDown()) {
+                ModNetwork.CHANNEL.sendToServer(new RecallLastUploadedPatternPacket());
+            } else {
+                ModNetwork.CHANNEL.sendToServer(new RequestProvidersListPacket());
+            }
             event.setCanceled(true);
         }
+    }
+
+    private boolean isShiftKeyDown() {
+        return Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT);
     }
 }

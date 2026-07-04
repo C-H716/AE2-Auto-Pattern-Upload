@@ -1,5 +1,10 @@
 package com.gali.ae2_auto_pattern_upload.util;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
@@ -15,6 +20,9 @@ import appeng.api.AEApi;
 import appeng.api.config.Actionable;
 import appeng.api.implementations.ICraftingPatternItem;
 import appeng.api.networking.IGrid;
+import appeng.api.networking.IGridHost;
+import appeng.api.networking.IGridNode;
+import appeng.api.networking.IMachineSet;
 import appeng.api.networking.crafting.ICraftingGrid;
 import appeng.api.networking.crafting.ICraftingPatternDetails;
 import appeng.api.networking.crafting.ICraftingProvider;
@@ -33,6 +41,8 @@ import appeng.items.misc.ItemEncodedPattern;
 import appeng.util.Platform;
 
 public class UploadUtil {
+
+    private static final Map<UUID, LastUploadedPattern> LAST_UPLOADED_PATTERNS = new HashMap<>();
 
     /**
      * 判断传入的物品是否为受支持的已编码样板。
@@ -146,6 +156,84 @@ public class UploadUtil {
         }
 
         return false;
+    }
+
+    public static void rememberLastUploadedPattern(EntityPlayer player, ICraftingProvider provider, ItemStack pattern) {
+        if (player == null || provider == null || pattern == null) {
+            return;
+        }
+
+        LAST_UPLOADED_PATTERNS.put(
+            player.getUniqueID(),
+            new LastUploadedPattern(System.identityHashCode(provider), pattern.copy()));
+    }
+
+    public static ItemStack takeLastUploadedPattern(EntityPlayer player, IGrid grid) {
+        if (player == null || grid == null) {
+            return null;
+        }
+
+        LastUploadedPattern record = LAST_UPLOADED_PATTERNS.get(player.getUniqueID());
+        if (record == null) {
+            return null;
+        }
+
+        ICraftingProvider provider = findProviderById(grid, record.providerId);
+        if (provider == null) {
+            LAST_UPLOADED_PATTERNS.remove(player.getUniqueID());
+            return null;
+        }
+
+        ItemStack removed = removePatternFromProvider(provider, record.pattern);
+        if (removed != null) {
+            LAST_UPLOADED_PATTERNS.remove(player.getUniqueID());
+        }
+        return removed;
+    }
+
+    public static ICraftingProvider findProviderById(IGrid grid, long providerId) {
+        if (grid == null) {
+            return null;
+        }
+
+        for (Class<? extends IGridHost> hostClass : grid.getMachinesClasses()) {
+            if (!ICraftingProvider.class.isAssignableFrom(hostClass)) {
+                continue;
+            }
+            IMachineSet machines = grid.getMachines(hostClass);
+            if (machines == null) {
+                continue;
+            }
+            for (IGridNode machineNode : machines) {
+                if (machineNode == null) {
+                    continue;
+                }
+                Object machine = machineNode.getMachine();
+                if (machine instanceof ICraftingProvider provider && System.identityHashCode(machine) == providerId) {
+                    return provider;
+                }
+            }
+        }
+        return null;
+    }
+
+    public static ItemStack removePatternFromProvider(ICraftingProvider provider, ItemStack pattern) {
+        IInventory patterns = getPatternInventory(provider);
+        if (patterns == null || pattern == null) {
+            return null;
+        }
+
+        for (int i = 0; i < patterns.getSizeInventory(); i++) {
+            ItemStack stack = patterns.getStackInSlot(i);
+            if (isSamePatternIgnoringAuthor(stack, pattern)) {
+                ItemStack removed = stack.copy();
+                patterns.setInventorySlotContents(i, null);
+                patterns.markDirty();
+                saveProvider(provider);
+                return removed;
+            }
+        }
+        return null;
     }
 
     /**
@@ -382,6 +470,19 @@ public class UploadUtil {
         return false;
     }
 
+    private static IInventory getPatternInventory(ICraftingProvider provider) {
+        if (provider instanceof IInterfaceHost host) {
+            return host.getPatterns();
+        }
+        if (provider instanceof IInterfaceViewable viewable) {
+            return viewable.getPatterns();
+        }
+        if (provider instanceof IInventory inventory) {
+            return inventory;
+        }
+        return resolvePatternsInventory(provider);
+    }
+
     private static IInventory resolvePatternsInventory(ICraftingProvider provider) {
         try {
             Object result = provider.getClass()
@@ -467,6 +568,12 @@ public class UploadUtil {
         return false;
     }
 
+    private static void saveProvider(ICraftingProvider provider) {
+        if (provider instanceof IInterfaceHost host) {
+            host.saveChanges();
+        }
+    }
+
     /**
      * 将样板插入到普通的物品槽（Inventory）中。
      * 遍历所有槽位，寻找空槽位进行插入。
@@ -492,5 +599,16 @@ public class UploadUtil {
         }
 
         return false;
+    }
+
+    private static class LastUploadedPattern {
+
+        private final long providerId;
+        private final ItemStack pattern;
+
+        private LastUploadedPattern(long providerId, ItemStack pattern) {
+            this.providerId = providerId;
+            this.pattern = pattern;
+        }
     }
 }

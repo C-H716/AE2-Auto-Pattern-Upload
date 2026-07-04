@@ -134,6 +134,7 @@ public class AutoUploadPatternPacket implements IMessage {
                         .insertPatternIntoProvider(matchResult.provider, encodedPattern.copy());
 
                     if (placedInProvider) {
+                        UploadUtil.rememberLastUploadedPattern(player, matchResult.provider, encodedPattern);
                         outputSlot.putStack(null);
                         if (terminal instanceof AEBasePart part) {
                             part.saveChanges();
@@ -150,6 +151,7 @@ public class AutoUploadPatternPacket implements IMessage {
                             matchResult.provider,
                             encodedPattern.copy());
                         if (installedAndPlaced) {
+                            UploadUtil.rememberLastUploadedPattern(player, matchResult.provider, encodedPattern);
                             outputSlot.putStack(null);
                             if (terminal instanceof AEBasePart part) {
                                 part.saveChanges();

@@ -97,6 +97,7 @@ public class UploadPatternPacket implements IMessage {
             try {
                 boolean placedInProvider = UploadUtil.insertPatternIntoProvider(target, encodedPattern.copy());
                 if (placedInProvider) {
+                    UploadUtil.rememberLastUploadedPattern(player, target, encodedPattern);
                     outputSlot.putStack(null);
                     if (terminal instanceof AEBasePart part) {
                         part.saveChanges();

@@ -12,6 +12,7 @@ import com.gali.ae2_auto_pattern_upload.network.provider.ProvidersListS2CPacket;
 import com.gali.ae2_auto_pattern_upload.network.provider.RequestProvidersListPacket;
 import com.gali.ae2_auto_pattern_upload.network.upload.AutoUploadPatternPacket;
 import com.gali.ae2_auto_pattern_upload.network.upload.ClearRecipeNamePacket;
+import com.gali.ae2_auto_pattern_upload.network.upload.RecallLastUploadedPatternPacket;
 import com.gali.ae2_auto_pattern_upload.network.upload.UploadPatternPacket;
 
 import cpw.mods.fml.common.network.NetworkRegistry;
@@ -120,5 +121,12 @@ public final class ModNetwork {
             ClearRecipeNamePacket.class,
             discriminator++,
             Side.CLIENT);
+
+        // 注册取回上次上传样板数据包（客户端->服务器）
+        INSTANCE.registerMessage(
+            RecallLastUploadedPatternPacket.Handler.class,
+            RecallLastUploadedPatternPacket.class,
+            discriminator++,
+            Side.SERVER);
     }
 }
