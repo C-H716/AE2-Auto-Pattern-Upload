@@ -12,9 +12,9 @@
     "ae2.PatternMultiplierHelperMixin",
     "ae2.QuantumClusterMixin",
     "ae2.accessor.AEBaseContainerAccessor",
+    "ae2.accessor.ContainerPatternTermAccessor",
     "ae2.accessor.GuiContainerAccessor",
     "ae2.accessor.QuantumClusterAccessor",
-
     "gt.DisableDebuff_Mixin",
     "gt.ToolVajraMixin",
     "jabba.DisableDollyDebuff_Mixin",
@@ -28,7 +28,6 @@
     "ae2.GuiPatternTermExEncodeMixin",
     "ae2.ItemMultiMaterialMixin",
     "ae2.ItemRepoMixin",
-
     "nei.MixinDefaultOverlayHandler",
     "nei.MixinRecipeHandlerRef",
     "nei.NEIShortcutInputHandlerMixin"

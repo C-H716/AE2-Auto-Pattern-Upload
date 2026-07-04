@@ -86,8 +86,8 @@ public class ProvidersListS2CPacket implements IMessage {
                 public void run() {
                     GuiScreen current = Minecraft.getMinecraft().currentScreen;
                     // 如果当前已经是GuiProviderSelect，更新数据而不是创建新的
-                    if (current instanceof com.gali.ae2_auto_pattern_upload.client.gui.GuiProviderSelect) {
-                        ((com.gali.ae2_auto_pattern_upload.client.gui.GuiProviderSelect) current)
+                    if (current instanceof GuiProviderSelect) {
+                        ((GuiProviderSelect) current)
                             .updateData(message.ids, message.names, message.emptySlots, message.canInstallCard);
                     } else {
                         Minecraft.getMinecraft()

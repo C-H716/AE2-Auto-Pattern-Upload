@@ -1,28 +1,19 @@
 package com.gali.ae2_auto_pattern_upload.network.upload;
 
-import java.lang.reflect.Field;
-
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.Container;
-import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.ChatComponentTranslation;
 
-import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.AEBaseContainerAccessor;
-import com.glodblock.github.client.gui.container.ContainerFluidPatternEncoder;
-import com.glodblock.github.common.item.ItemFluidEncodedPattern;
+import com.gali.ae2_auto_pattern_upload.util.UploadUtil;
 
-import appeng.api.AEApi;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridHost;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IMachineSet;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionHost;
-import appeng.api.util.IInterfaceViewable;
-import appeng.container.implementations.ContainerPatternTerm;
-import appeng.container.implementations.ContainerPatternTermEx;
 import appeng.container.slot.SlotRestrictedInput;
-import appeng.helpers.IInterfaceHost;
 import appeng.parts.AEBasePart;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -59,12 +50,12 @@ public class UploadPatternPacket implements IMessage {
             }
 
             Container container = player.openContainer;
-            IActionHost terminal = resolveTerminal(container);
+            IActionHost terminal = UploadUtil.resolveTerminal(container);
             if (terminal == null) {
                 return null;
             }
 
-            SlotRestrictedInput outputSlot = resolveOutputSlot(container);
+            SlotRestrictedInput outputSlot = UploadUtil.resolveOutputSlot(container);
             if (outputSlot == null) {
                 return null;
             }
@@ -74,26 +65,37 @@ public class UploadPatternPacket implements IMessage {
                 return null;
             }
 
-            if (!isSupportedPattern(encodedPattern)) {
+            if (!UploadUtil.isSupportedPattern(encodedPattern)) {
+                return null;
+            }
+
+            IGridNode node = terminal.getActionableNode();
+            if (node == null) {
+                return null;
+            }
+            IGrid grid = node.getGrid();
+            if (grid == null) {
+                return null;
+            }
+
+            ICraftingProvider target = findProvider(grid, message.providerId);
+            if (target == null) {
+                return null;
+            }
+
+            if (UploadUtil.hasSamePatternInNetwork(grid, encodedPattern, player.worldObj)) {
+                UploadUtil.returnBlankPatternToNetwork(grid, player, terminal, outputSlot, encodedPattern);
+                sendMessage(player, "ae2_auto_pattern_upload.info.pattern_already_exists");
+                return null;
+            }
+
+            if (!UploadUtil.canProviderAcceptPattern(target, encodedPattern)) {
+                sendMessage(player, "ae2_auto_pattern_upload.info.pattern_not_valid_for_provider");
                 return null;
             }
 
             try {
-                IGridNode node = terminal.getActionableNode();
-                if (node == null) {
-                    return null;
-                }
-                IGrid grid = node.getGrid();
-                if (grid == null) {
-                    return null;
-                }
-
-                ICraftingProvider target = findProvider(grid, message.providerId);
-                if (target == null) {
-                    return null;
-                }
-
-                boolean placedInProvider = insertPatternIntoProvider(target, encodedPattern.copy());
+                boolean placedInProvider = UploadUtil.insertPatternIntoProvider(target, encodedPattern.copy());
                 if (placedInProvider) {
                     outputSlot.putStack(null);
                     if (terminal instanceof AEBasePart part) {
@@ -107,57 +109,10 @@ public class UploadPatternPacket implements IMessage {
             return null;
         }
 
-        private boolean isSupportedPattern(ItemStack stack) {
-            if (stack == null) {
-                return false;
+        private void sendMessage(EntityPlayerMP player, String key) {
+            if (player != null && key != null && !key.isEmpty()) {
+                player.addChatMessage(new ChatComponentTranslation(key));
             }
-            if (AEApi.instance()
-                .definitions()
-                .items()
-                .encodedPattern()
-                .isSameAs(stack)) {
-                return true;
-            }
-            return stack.getItem() instanceof ItemFluidEncodedPattern;
-        }
-
-        private IActionHost resolveTerminal(Container container) {
-            if (container instanceof ContainerPatternTerm term) {
-                return term.getPatternTerminal();
-            }
-            if (container instanceof ContainerPatternTermEx termEx) {
-                return termEx.getPatternTerminal();
-            }
-            if (container instanceof ContainerFluidPatternEncoder) {
-                return ((AEBaseContainerAccessor) container).invokeGetActionHost();
-            }
-            return null;
-        }
-
-        private SlotRestrictedInput resolveOutputSlot(Container container) {
-            try {
-                if (container instanceof ContainerPatternTerm term) {
-                    Field field = ContainerPatternTerm.class.getDeclaredField("patternSlotOUT");
-                    field.setAccessible(true);
-                    return (SlotRestrictedInput) field.get(term);
-                }
-                if (container instanceof ContainerPatternTermEx termEx) {
-                    Field field = ContainerPatternTermEx.class.getDeclaredField("patternSlotOUT");
-                    field.setAccessible(true);
-                    return (SlotRestrictedInput) field.get(termEx);
-                }
-                if (container instanceof ContainerFluidPatternEncoder fluidEncoder) {
-                    IInventory inventory = fluidEncoder.getTile()
-                        .getInventory();
-                    for (Object slotObject : fluidEncoder.inventorySlots) {
-                        if (slotObject instanceof SlotRestrictedInput slot && slot.inventory == inventory
-                            && slot.getSlotIndex() == 1) {
-                            return slot;
-                        }
-                    }
-                }
-            } catch (Exception ignored) {}
-            return null;
         }
 
         private ICraftingProvider findProvider(IGrid grid, long providerId) {
@@ -183,91 +138,6 @@ public class UploadPatternPacket implements IMessage {
                 }
             }
             return null;
-        }
-
-        private boolean insertPatternIntoProvider(ICraftingProvider provider, ItemStack pattern) {
-            // 优先处理 AE2 标准接口（IInterfaceHost），确保只插入到编码样板槽（patterns）
-            if (provider instanceof IInterfaceHost host) {
-                IInventory patterns = host.getPatterns();
-                if (patterns != null) {
-                    // 计算实际可用的槽位数量（基于升级卡）
-                    int availableSlots = host.rows() * host.rowSize();
-                    if (insertIntoPatternInventory(patterns, pattern, availableSlots)) {
-                        host.saveChanges();
-                        return true;
-                    }
-                }
-                // 接口的样板槽满了，直接返回 false，不要尝试放到物品槽
-                return false;
-            }
-
-            // 处理 GT5 和 Programmable Hatches 的接口（IInterfaceViewable）
-            if (provider instanceof IInterfaceViewable viewable) {
-                IInventory patterns = viewable.getPatterns();
-                if (patterns != null) {
-                    // 计算实际可用的槽位数量
-                    int availableSlots = viewable.rows() * viewable.rowSize();
-                    if (insertIntoPatternInventory(patterns, pattern, availableSlots)) {
-                        // IInterfaceViewable 没有 saveChanges 方法，直接标记脏数据
-                        patterns.markDirty();
-                        return true;
-                    }
-                }
-                // 样板槽满了，直接返回 false
-                return false;
-            }
-
-            if (provider instanceof IInventory inventory) {
-                return insertIntoInventory(inventory, pattern);
-            }
-
-            return false;
-        }
-
-        /**
-         * 将样板插入到编码样板槽（patterns）中
-         * 确保只插入到允许放置编码样板的槽位
-         */
-        private boolean insertIntoPatternInventory(IInventory patterns, ItemStack pattern, int maxSlots) {
-            if (patterns == null) {
-                return false;
-            }
-
-            int limit = Math.min(maxSlots, patterns.getSizeInventory());
-            for (int i = 0; i < limit; i++) {
-                ItemStack slot = patterns.getStackInSlot(i);
-                if (slot == null || slot.stackSize <= 0) {
-                    // 检查该槽位是否允许放置编码样板
-                    if (patterns.isItemValidForSlot(i, pattern)) {
-                        ItemStack copy = pattern.copy();
-                        copy.stackSize = 1;
-                        patterns.setInventorySlotContents(i, copy);
-                        patterns.markDirty();
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        private boolean insertIntoInventory(IInventory inventory, ItemStack pattern) {
-            if (inventory == null) {
-                return false;
-            }
-
-            for (int i = 0; i < inventory.getSizeInventory(); i++) {
-                ItemStack slot = inventory.getStackInSlot(i);
-                if (slot == null || slot.stackSize <= 0) {
-                    ItemStack copy = pattern.copy();
-                    copy.stackSize = 1;
-                    inventory.setInventorySlotContents(i, copy);
-                    inventory.markDirty();
-                    return true;
-                }
-            }
-
-            return false;
         }
     }
 }

@@ -1,5 +1,15 @@
 package com.gali.ae2_auto_pattern_upload.network.provider;
 
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.event.ClickEvent;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraft.util.ChatStyle;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.world.World;
+import net.minecraftforge.common.util.ForgeDirection;
+
 import appeng.api.parts.IPart;
 import appeng.api.parts.IPartHost;
 import appeng.api.util.DimensionalCoord;
@@ -14,15 +24,6 @@ import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import gregtech.api.interfaces.metatileentity.IMetaTileEntity;
 import gregtech.api.interfaces.tileentity.IGregTechTileEntity;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.event.ClickEvent;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.ChatComponentTranslation;
-import net.minecraft.util.ChatStyle;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.ForgeDirection;
 import reobf.proghatches.gt.metatileentity.DualInputHatch;
 
 /**
@@ -133,8 +134,7 @@ public class PacketOpenProviderGui implements IMessage {
         }
 
         private void sendTeleportMessage(EntityPlayerMP player, int x, int y, int z) {
-            ChatComponentText message = new ChatComponentText(
-                "[" + x + ", " + y + ", " + z + "]");
+            ChatComponentText message = new ChatComponentText("[" + x + ", " + y + ", " + z + "]");
             String tpCommand = "/tp @p " + x + " " + (y + 1) + " " + z;
             ChatStyle style = new ChatStyle().setColor(EnumChatFormatting.GREEN)
                 .setChatClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, tpCommand))

@@ -8,6 +8,7 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.StatCollector;
 
 import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.AEBaseContainerAccessor;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
@@ -25,6 +26,7 @@ import appeng.container.implementations.ContainerPatternTerm;
 import appeng.container.implementations.ContainerPatternTermEx;
 import appeng.helpers.IInterfaceHost;
 import appeng.parts.AEBasePart;
+import appeng.parts.automation.UpgradeInventory;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
@@ -238,9 +240,8 @@ public class RequestProvidersListPacket implements IMessage {
 
                 // 检查是否达到最大数量
                 int maxCards = 3; // 默认最大3个
-                if (upgrades instanceof appeng.parts.automation.UpgradeInventory) {
-                    maxCards = ((appeng.parts.automation.UpgradeInventory) upgrades)
-                        .getMaxInstalled(Upgrades.PATTERN_CAPACITY);
+                if (upgrades instanceof UpgradeInventory) {
+                    maxCards = ((UpgradeInventory) upgrades).getMaxInstalled(Upgrades.PATTERN_CAPACITY);
                 }
 
                 return currentCards < maxCards;
@@ -255,7 +256,7 @@ public class RequestProvidersListPacket implements IMessage {
             // 优先检查 IInterfaceViewable 的 getName() 方法 (GT5 和 Programmable Hatches 使用)
             if (machine instanceof IInterfaceViewable viewable) {
                 try {
-                    name = viewable.getName();
+                    name = resolveDisplayName(viewable);
                 } catch (Throwable ignored) {}
             }
 
@@ -280,7 +281,7 @@ public class RequestProvidersListPacket implements IMessage {
             if (machine instanceof AEBasePart part) {
                 try {
                     String customName = part.getCustomName();
-                    if (customName != null && !customName.isEmpty()) {
+                    if (isValidProviderName(customName)) {
                         name = customName;
                     }
                 } catch (Throwable ignored) {}
@@ -290,6 +291,48 @@ public class RequestProvidersListPacket implements IMessage {
                 name = "ME Interface";
             }
             return name;
+        }
+
+        private String resolveDisplayName(IInterfaceViewable viewable) {
+            String rawName = viewable.getRawName();
+            String suffix = viewable.getNameSuffix();
+            if (isValidProviderName(rawName)) {
+                String translated = translateProviderName(rawName);
+                if (translated != null && !translated.isEmpty()) {
+                    return suffix == null ? translated : translated + suffix;
+                }
+                return suffix == null ? rawName : rawName + suffix;
+            }
+
+            String name = viewable.getName();
+            if (isValidProviderName(name)) {
+                String translated = translateProviderName(name);
+                return translated == null || translated.isEmpty() ? name : translated;
+            }
+            return null;
+        }
+
+        private String translateProviderName(String name) {
+            String translated = StatCollector.translateToLocal(name);
+            if (translated == null || translated.isEmpty() || translated.equals(name)) {
+                translated = StatCollector.translateToLocal(name + ".name");
+            }
+            return translated == null || translated.equals(name + ".name") ? name : translated;
+        }
+
+        private boolean isValidProviderName(String name) {
+            if (name == null) {
+                return false;
+            }
+            String trimmed = name.trim();
+            if (trimmed.isEmpty() || "nothing".equalsIgnoreCase(trimmed)) {
+                return false;
+            }
+            String lower = trimmed.toLowerCase(java.util.Locale.ROOT);
+            return !lower.startsWith("appeng.") && !lower.startsWith("gregtech.")
+                && !lower.startsWith("com.")
+                && !lower.contains(".tile")
+                && !lower.contains(".part");
         }
     }
 }

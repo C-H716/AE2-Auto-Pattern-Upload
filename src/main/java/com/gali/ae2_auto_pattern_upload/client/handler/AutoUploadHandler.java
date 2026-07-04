@@ -1,13 +1,10 @@
 package com.gali.ae2_auto_pattern_upload.client.handler;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.gali.ae2_auto_pattern_upload.config.AutoUploadTargetConfig;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
 import com.gali.ae2_auto_pattern_upload.network.upload.AutoUploadPatternPacket;
 import com.gali.ae2_auto_pattern_upload.util.RecipeNameUtil;
@@ -44,13 +41,10 @@ public class AutoUploadHandler {
             return;
         }
 
-        // 获取目标供应器名称列表
-        List<String> targetProviderNames = new ArrayList<>(AutoUploadTargetConfig.getTargetProviders());
-
         // 延迟 100ms 后异步发送自动上传请求到服务器
         // 这样可以确保服务器已经处理完编码操作
         DELAY_EXECUTOR.schedule(
-            () -> { ModNetwork.CHANNEL.sendToServer(new AutoUploadPatternPacket(mappedName, targetProviderNames)); },
+            () -> { ModNetwork.CHANNEL.sendToServer(new AutoUploadPatternPacket(mappedName)); },
             100,
             TimeUnit.MILLISECONDS);
     }

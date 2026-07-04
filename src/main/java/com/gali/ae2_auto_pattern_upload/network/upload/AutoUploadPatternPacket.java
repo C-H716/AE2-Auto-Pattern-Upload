@@ -1,8 +1,5 @@
 package com.gali.ae2_auto_pattern_upload.network.upload;
 
-import static com.gali.ae2_auto_pattern_upload.util.RecipeNameUtil.normalizeKey;
-
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,13 +9,15 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraft.util.StatCollector;
 
-import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.AEBaseContainerAccessor;
 import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.glodblock.github.client.gui.container.ContainerFluidPatternEncoder;
-import com.glodblock.github.common.item.ItemFluidEncodedPattern;
+import com.gali.ae2_auto_pattern_upload.util.RecipeNameUtil;
+import com.gali.ae2_auto_pattern_upload.util.UploadUtil;
 
 import appeng.api.AEApi;
+import appeng.api.config.Actionable;
 import appeng.api.config.Upgrades;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridHost;
@@ -26,11 +25,10 @@ import appeng.api.networking.IGridNode;
 import appeng.api.networking.IMachineSet;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionHost;
+import appeng.api.networking.security.PlayerSource;
 import appeng.api.networking.storage.IStorageGrid;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.api.util.IInterfaceViewable;
-import appeng.container.implementations.ContainerPatternTerm;
-import appeng.container.implementations.ContainerPatternTermEx;
 import appeng.container.slot.SlotRestrictedInput;
 import appeng.helpers.IInterfaceHost;
 import appeng.parts.AEBasePart;
@@ -47,15 +45,11 @@ import io.netty.buffer.ByteBuf;
 public class AutoUploadPatternPacket implements IMessage {
 
     private String mappedName; // 客户端查找后的映射名称
-    private List<String> targetProviderNames; // 客户端设置的目标供应器名称列表
 
-    public AutoUploadPatternPacket() {
-        this.targetProviderNames = new ArrayList<>();
-    }
+    public AutoUploadPatternPacket() {}
 
-    public AutoUploadPatternPacket(String mappedName, List<String> targetProviderNames) {
+    public AutoUploadPatternPacket(String mappedName) {
         this.mappedName = mappedName;
-        this.targetProviderNames = targetProviderNames != null ? targetProviderNames : new ArrayList<>();
     }
 
     @Override
@@ -65,16 +59,6 @@ public class AutoUploadPatternPacket implements IMessage {
         byte[] bytes1 = new byte[len1];
         buf.readBytes(bytes1);
         this.mappedName = new String(bytes1, StandardCharsets.UTF_8);
-
-        // 读取目标供应器名称列表
-        int targetCount = buf.readShort();
-        this.targetProviderNames = new ArrayList<>();
-        for (int i = 0; i < targetCount; i++) {
-            int nameLen = buf.readShort();
-            byte[] nameBytes = new byte[nameLen];
-            buf.readBytes(nameBytes);
-            this.targetProviderNames.add(new String(nameBytes, StandardCharsets.UTF_8));
-        }
     }
 
     @Override
@@ -83,14 +67,6 @@ public class AutoUploadPatternPacket implements IMessage {
         byte[] bytes1 = mappedName.getBytes(StandardCharsets.UTF_8);
         buf.writeShort(bytes1.length);
         buf.writeBytes(bytes1);
-
-        // 写入目标供应器名称列表
-        buf.writeShort(targetProviderNames.size());
-        for (String name : targetProviderNames) {
-            byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
-            buf.writeShort(nameBytes.length);
-            buf.writeBytes(nameBytes);
-        }
     }
 
     public static class Handler implements IMessageHandler<AutoUploadPatternPacket, IMessage> {
@@ -103,12 +79,12 @@ public class AutoUploadPatternPacket implements IMessage {
             }
 
             Container container = player.openContainer;
-            IActionHost terminal = resolveTerminal(container);
+            IActionHost terminal = UploadUtil.resolveTerminal(container);
             if (terminal == null) {
                 return null;
             }
 
-            SlotRestrictedInput outputSlot = resolveOutputSlot(container);
+            SlotRestrictedInput outputSlot = UploadUtil.resolveOutputSlot(container);
             if (outputSlot == null) {
                 return null;
             }
@@ -118,7 +94,7 @@ public class AutoUploadPatternPacket implements IMessage {
                 return null;
             }
 
-            if (!isSupportedPattern(encodedPattern)) {
+            if (!UploadUtil.isSupportedPattern(encodedPattern)) {
                 return null;
             }
 
@@ -138,13 +114,24 @@ public class AutoUploadPatternPacket implements IMessage {
                     return null;
                 }
 
-                // Find matching provider (using target list from client)
-                ProviderMatchResult matchResult = findMatchingProvider(grid, mappedName, message.targetProviderNames);
+                if (UploadUtil.hasSamePatternInNetwork(grid, encodedPattern, player.worldObj)) {
+                    UploadUtil.returnBlankPatternToNetwork(grid, player, terminal, outputSlot, encodedPattern);
+                    sendMessageWithArgs(player, "ae2_auto_pattern_upload.info.pattern_already_exists");
+                    return null;
+                }
+
+                ProviderMatchResult matchResult = findMatchingProvider(grid, mappedName);
 
                 // Process based on match result
                 if (matchResult.matchType == MatchType.EXACT_MATCH) {
+                    if (!UploadUtil.canProviderAcceptPattern(matchResult.provider, encodedPattern)) {
+                        sendMessageWithArgs(player, "ae2_auto_pattern_upload.info.pattern_not_valid_for_provider");
+                        return null;
+                    }
+
                     // Exact match, execute upload
-                    boolean placedInProvider = insertPatternIntoProvider(matchResult.provider, encodedPattern.copy());
+                    boolean placedInProvider = UploadUtil
+                        .insertPatternIntoProvider(matchResult.provider, encodedPattern.copy());
 
                     if (placedInProvider) {
                         outputSlot.putStack(null);
@@ -183,44 +170,18 @@ public class AutoUploadPatternPacket implements IMessage {
         private void sendSuccessMessage(EntityPlayerMP player, String providerName) {
             if (player != null) {
                 player.addChatMessage(
-                    new net.minecraft.util.ChatComponentTranslation(
-                        "ae2_auto_pattern_upload.info.auto_upload_success",
-                        providerName));
+                    new ChatComponentTranslation("ae2_auto_pattern_upload.info.auto_upload_success", providerName));
             }
         }
 
         private void sendMessageWithArgs(EntityPlayerMP player, String key, Object... args) {
             if (player != null && key != null && !key.isEmpty()) {
-                player.addChatMessage(new net.minecraft.util.ChatComponentTranslation(key, args));
+                player.addChatMessage(new ChatComponentTranslation(key, args));
             }
         }
 
-        private enum MatchType {
-            NO_MATCH, // 没有匹配
-            PARTIAL_MATCH, // 部分匹配（如"压印器-1"）
-            EXACT_MATCH // 完全匹配
-        }
-
-        private static class ProviderMatchResult {
-
-            final ICraftingProvider provider;
-            final MatchType matchType;
-            final boolean canInstallCard; // 是否可以安装样板容量卡
-
-            ProviderMatchResult(ICraftingProvider provider, MatchType matchType) {
-                this(provider, matchType, false);
-            }
-
-            ProviderMatchResult(ICraftingProvider provider, MatchType matchType, boolean canInstallCard) {
-                this.provider = provider;
-                this.matchType = matchType;
-                this.canInstallCard = canInstallCard;
-            }
-        }
-
-        private ProviderMatchResult findMatchingProvider(IGrid grid, String mappedName,
-            List<String> targetProviderNames) {
-            String normalizedMappedName = normalizeKey(mappedName);
+        private ProviderMatchResult findMatchingProvider(IGrid grid, String mappedName) {
+            String normalizedMappedName = RecipeNameUtil.normalizeKey(mappedName);
 
             // Collect all providers
             List<ProviderInfo> allProviders = new ArrayList<>();
@@ -242,7 +203,7 @@ public class AutoUploadPatternPacket implements IMessage {
                     }
 
                     String providerName = resolveProviderName(machine);
-                    String normalizedProviderName = normalizeKey(providerName);
+                    String normalizedProviderName = RecipeNameUtil.normalizeKey(providerName);
                     boolean hasEmpty = hasEmptySlot(provider);
                     boolean canInstall = canInstallCapacityCard(provider);
 
@@ -260,10 +221,10 @@ public class AutoUploadPatternPacket implements IMessage {
                 return new ProviderMatchResult(null, MatchType.NO_MATCH);
             }
 
-            // Step 1: Check for exact match with target providers
+            // Step 1: Check for exact match
             List<ProviderInfo> exactMatches = new ArrayList<>();
             for (ProviderInfo info : allProviders) {
-                if (info.normalizedName.equals(normalizedMappedName) && targetProviderNames.contains(info.name)) {
+                if (info.normalizedName.equals(normalizedMappedName)) {
                     exactMatches.add(info);
                 }
             }
@@ -300,8 +261,7 @@ public class AutoUploadPatternPacket implements IMessage {
             // Fuzzy match rule: provider name must start with mapped name
             List<ProviderInfo> fuzzyMatches = new ArrayList<>();
             for (ProviderInfo info : allProviders) {
-                boolean isFuzzyMatch = info.normalizedName.startsWith(normalizedMappedName)
-                    && targetProviderNames.contains(info.name);
+                boolean isFuzzyMatch = info.normalizedName.startsWith(normalizedMappedName);
 
                 if (isFuzzyMatch) {
                     fuzzyMatches.add(info);
@@ -326,24 +286,6 @@ public class AutoUploadPatternPacket implements IMessage {
             }
 
             return new ProviderMatchResult(null, MatchType.NO_MATCH);
-        }
-
-        private static class ProviderInfo {
-
-            final ICraftingProvider provider;
-            final String name;
-            final String normalizedName;
-            final boolean hasEmptySlot;
-            final boolean canInstallCard; // 是否可以安装样板容量卡
-
-            ProviderInfo(ICraftingProvider provider, String name, String normalizedName, boolean hasEmptySlot,
-                boolean canInstallCard) {
-                this.provider = provider;
-                this.name = name;
-                this.normalizedName = normalizedName;
-                this.hasEmptySlot = hasEmptySlot;
-                this.canInstallCard = canInstallCard;
-            }
         }
 
         private boolean hasEmptySlot(ICraftingProvider provider) {
@@ -460,10 +402,7 @@ public class AutoUploadPatternPacket implements IMessage {
                     .storage()
                     .createItemStack(capacityCard);
                 IAEItemStack extracted = storageGrid.getItemInventory()
-                    .extractItems(
-                        cardStack,
-                        appeng.api.config.Actionable.MODULATE,
-                        new appeng.api.networking.security.PlayerSource(player, host));
+                    .extractItems(cardStack, Actionable.MODULATE, new PlayerSource(player, host));
 
                 if (extracted == null || extracted.getStackSize() <= 0) {
                     return false;
@@ -475,10 +414,7 @@ public class AutoUploadPatternPacket implements IMessage {
                 if (upgrades == null) {
                     // 返还提取的物品
                     storageGrid.getItemInventory()
-                        .injectItems(
-                            extracted,
-                            appeng.api.config.Actionable.MODULATE,
-                            new appeng.api.networking.security.PlayerSource(player, host));
+                        .injectItems(extracted, Actionable.MODULATE, new PlayerSource(player, host));
                     return false;
                 }
 
@@ -498,10 +434,7 @@ public class AutoUploadPatternPacket implements IMessage {
                 if (!inserted) {
                     // 返还提取的物品
                     storageGrid.getItemInventory()
-                        .injectItems(
-                            extracted,
-                            appeng.api.config.Actionable.MODULATE,
-                            new appeng.api.networking.security.PlayerSource(player, host));
+                        .injectItems(extracted, Actionable.MODULATE, new PlayerSource(player, host));
                     return false;
                 }
 
@@ -510,10 +443,7 @@ public class AutoUploadPatternPacket implements IMessage {
                     IAEItemStack remaining = extracted.copy();
                     remaining.setStackSize(extracted.getStackSize() - 1);
                     storageGrid.getItemInventory()
-                        .injectItems(
-                            remaining,
-                            appeng.api.config.Actionable.MODULATE,
-                            new appeng.api.networking.security.PlayerSource(player, host));
+                        .injectItems(remaining, Actionable.MODULATE, new PlayerSource(player, host));
                 }
 
                 // 保存更改
@@ -526,9 +456,7 @@ public class AutoUploadPatternPacket implements IMessage {
                 IInventory patterns = host.getPatterns();
                 if (patterns != null) {
                     int availableSlots = host.rows() * host.rowSize();
-                    if (insertIntoPatternInventory(patterns, pattern, availableSlots)) {
-                        return true;
-                    }
+                    return UploadUtil.insertIntoPatternInventory(patterns, pattern, availableSlots);
                 }
 
                 return false;
@@ -558,7 +486,7 @@ public class AutoUploadPatternPacket implements IMessage {
             // 优先检查 IInterfaceViewable 的 getName() 方法 (GT5 和 Programmable Hatches 使用)
             if (machine instanceof IInterfaceViewable viewable) {
                 try {
-                    name = viewable.getName();
+                    name = resolveDisplayName(viewable);
                 } catch (Throwable ignored) {}
             }
 
@@ -583,7 +511,7 @@ public class AutoUploadPatternPacket implements IMessage {
             if (machine instanceof AEBasePart part) {
                 try {
                     String customName = part.getCustomName();
-                    if (customName != null && !customName.isEmpty()) {
+                    if (isValidProviderName(customName)) {
                         name = customName;
                     }
                 } catch (Throwable ignored) {}
@@ -594,133 +522,87 @@ public class AutoUploadPatternPacket implements IMessage {
             return name;
         }
 
-        private boolean isSupportedPattern(ItemStack stack) {
-            if (stack == null) {
-                return false;
+        private String resolveDisplayName(IInterfaceViewable viewable) {
+            String rawName = viewable.getRawName();
+            String suffix = viewable.getNameSuffix();
+            if (isValidProviderName(rawName)) {
+                String translated = translateProviderName(rawName);
+                if (translated != null && !translated.isEmpty()) {
+                    return suffix == null ? translated : translated + suffix;
+                }
+                return suffix == null ? rawName : rawName + suffix;
             }
-            if (AEApi.instance()
-                .definitions()
-                .items()
-                .encodedPattern()
-                .isSameAs(stack)) {
-                return true;
-            }
-            return stack.getItem() instanceof ItemFluidEncodedPattern;
-        }
 
-        private IActionHost resolveTerminal(Container container) {
-            if (container instanceof ContainerPatternTerm term) {
-                return term.getPatternTerminal();
-            }
-            if (container instanceof ContainerPatternTermEx termEx) {
-                return termEx.getPatternTerminal();
-            }
-            if (container instanceof ContainerFluidPatternEncoder) {
-                return ((AEBaseContainerAccessor) container).invokeGetActionHost();
+            String name = viewable.getName();
+            if (isValidProviderName(name)) {
+                String translated = translateProviderName(name);
+                return translated == null || translated.isEmpty() ? name : translated;
             }
             return null;
         }
 
-        private SlotRestrictedInput resolveOutputSlot(Container container) {
-            try {
-                if (container instanceof ContainerPatternTerm term) {
-                    Field field = ContainerPatternTerm.class.getDeclaredField("patternSlotOUT");
-                    field.setAccessible(true);
-                    return (SlotRestrictedInput) field.get(term);
-                }
-                if (container instanceof ContainerPatternTermEx termEx) {
-                    Field field = ContainerPatternTermEx.class.getDeclaredField("patternSlotOUT");
-                    field.setAccessible(true);
-                    return (SlotRestrictedInput) field.get(termEx);
-                }
-                if (container instanceof ContainerFluidPatternEncoder fluidEncoder) {
-                    IInventory inventory = fluidEncoder.getTile()
-                        .getInventory();
-                    for (Object slotObject : fluidEncoder.inventorySlots) {
-                        if (slotObject instanceof SlotRestrictedInput slot && slot.inventory == inventory
-                            && slot.getSlotIndex() == 1) {
-                            return slot;
-                        }
-                    }
-                }
-            } catch (Exception ignored) {}
-            return null;
+        private String translateProviderName(String name) {
+            String translated = StatCollector.translateToLocal(name);
+            if (translated == null || translated.isEmpty() || translated.equals(name)) {
+                translated = StatCollector.translateToLocal(name + ".name");
+            }
+            return translated == null || translated.equals(name + ".name") ? name : translated;
         }
 
-        private boolean insertPatternIntoProvider(ICraftingProvider provider, ItemStack pattern) {
-            // 优先处理 AE2 标准接口（IInterfaceHost）
-            if (provider instanceof IInterfaceHost host) {
-                IInventory patterns = host.getPatterns();
-                if (patterns != null) {
-                    int availableSlots = host.rows() * host.rowSize();
-                    if (insertIntoPatternInventory(patterns, pattern, availableSlots)) {
-                        host.saveChanges();
-                        return true;
-                    }
-                }
+        private boolean isValidProviderName(String name) {
+            if (name == null) {
                 return false;
             }
-
-            // 处理 GT5 和 Programmable Hatches 的接口（IInterfaceViewable）
-            if (provider instanceof IInterfaceViewable viewable) {
-                IInventory patterns = viewable.getPatterns();
-                if (patterns != null) {
-                    int availableSlots = viewable.rows() * viewable.rowSize();
-                    if (insertIntoPatternInventory(patterns, pattern, availableSlots)) {
-                        // IInterfaceViewable 没有 saveChanges 方法，直接标记脏数据
-                        patterns.markDirty();
-                        return true;
-                    }
-                }
+            String trimmed = name.trim();
+            if (trimmed.isEmpty() || "nothing".equalsIgnoreCase(trimmed)) {
                 return false;
             }
-
-            if (provider instanceof IInventory inventory) {
-                return insertIntoInventory(inventory, pattern);
-            }
-
-            return false;
+            String lower = trimmed.toLowerCase(java.util.Locale.ROOT);
+            return !lower.startsWith("appeng.") && !lower.startsWith("gregtech.")
+                && !lower.startsWith("com.")
+                && !lower.contains(".tile")
+                && !lower.contains(".part");
         }
 
-        private boolean insertIntoPatternInventory(IInventory patterns, ItemStack pattern, int maxSlots) {
-            if (patterns == null) {
-                return false;
-            }
-
-            int limit = Math.min(maxSlots, patterns.getSizeInventory());
-            for (int i = 0; i < limit; i++) {
-                ItemStack slot = patterns.getStackInSlot(i);
-                if (slot == null || slot.stackSize <= 0) {
-                    if (patterns.isItemValidForSlot(i, pattern)) {
-                        ItemStack copy = pattern.copy();
-                        copy.stackSize = 1;
-                        patterns.setInventorySlotContents(i, copy);
-                        patterns.markDirty();
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+        private enum MatchType {
+            NO_MATCH, // 没有匹配
+            PARTIAL_MATCH, // 部分匹配（如"压印器-1"）
+            EXACT_MATCH // 完全匹配
         }
 
-        private boolean insertIntoInventory(IInventory inventory, ItemStack pattern) {
-            if (inventory == null) {
-                return false;
+        private static class ProviderMatchResult {
+
+            final ICraftingProvider provider;
+            final MatchType matchType;
+            final boolean canInstallCard; // 是否可以安装样板容量卡
+
+            ProviderMatchResult(ICraftingProvider provider, MatchType matchType) {
+                this(provider, matchType, false);
             }
 
-            for (int i = 0; i < inventory.getSizeInventory(); i++) {
-                ItemStack slot = inventory.getStackInSlot(i);
-                if (slot == null || slot.stackSize <= 0) {
-                    ItemStack copy = pattern.copy();
-                    copy.stackSize = 1;
-                    inventory.setInventorySlotContents(i, copy);
-                    inventory.markDirty();
-                    return true;
-                }
+            ProviderMatchResult(ICraftingProvider provider, MatchType matchType, boolean canInstallCard) {
+                this.provider = provider;
+                this.matchType = matchType;
+                this.canInstallCard = canInstallCard;
             }
+        }
 
-            return false;
+        private static class ProviderInfo {
+
+            final ICraftingProvider provider;
+            final String name;
+            final String normalizedName;
+            final boolean hasEmptySlot;
+            final boolean canInstallCard; // 是否可以安装样板容量卡
+
+            ProviderInfo(ICraftingProvider provider, String name, String normalizedName, boolean hasEmptySlot,
+                boolean canInstallCard) {
+                this.provider = provider;
+                this.name = name;
+                this.normalizedName = normalizedName;
+                this.hasEmptySlot = hasEmptySlot;
+                this.canInstallCard = canInstallCard;
+            }
         }
     }
 }

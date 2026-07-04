@@ -8,12 +8,15 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraft.util.StatCollector;
 
 import com.gali.ae2_auto_pattern_upload.mixin.ae2.accessor.AEBaseContainerAccessor;
 import com.gali.ae2_auto_pattern_upload.network.provider.ProvidersListS2CPacket;
 import com.glodblock.github.client.gui.container.ContainerFluidPatternEncoder;
 
 import appeng.api.AEApi;
+import appeng.api.config.Actionable;
 import appeng.api.config.Upgrades;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridHost;
@@ -21,6 +24,7 @@ import appeng.api.networking.IGridNode;
 import appeng.api.networking.IMachineSet;
 import appeng.api.networking.crafting.ICraftingProvider;
 import appeng.api.networking.security.IActionHost;
+import appeng.api.networking.security.PlayerSource;
 import appeng.api.networking.storage.IStorageGrid;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.container.implementations.ContainerPatternTerm;
@@ -129,10 +133,7 @@ public class InstallCapacityCardPacket implements IMessage {
                     .storage()
                     .createItemStack(capacityCard);
                 IAEItemStack extracted = storageGrid.getItemInventory()
-                    .extractItems(
-                        cardStack,
-                        appeng.api.config.Actionable.MODULATE,
-                        new appeng.api.networking.security.PlayerSource(player, terminal));
+                    .extractItems(cardStack, Actionable.MODULATE, new PlayerSource(player, terminal));
 
                 if (extracted == null || extracted.getStackSize() <= 0) {
                     sendMessage(player, "ae2_auto_pattern_upload.info.no_capacity_card_in_network");
@@ -143,10 +144,7 @@ public class InstallCapacityCardPacket implements IMessage {
                 if (upgrades == null) {
                     // 返还提取的物品
                     storageGrid.getItemInventory()
-                        .injectItems(
-                            extracted,
-                            appeng.api.config.Actionable.MODULATE,
-                            new appeng.api.networking.security.PlayerSource(player, terminal));
+                        .injectItems(extracted, Actionable.MODULATE, new PlayerSource(player, terminal));
                     sendMessage(player, "ae2_auto_pattern_upload.info.no_upgrade_slots");
                     return null;
                 }
@@ -167,10 +165,7 @@ public class InstallCapacityCardPacket implements IMessage {
                 if (!inserted) {
                     // 返还提取的物品
                     storageGrid.getItemInventory()
-                        .injectItems(
-                            extracted,
-                            appeng.api.config.Actionable.MODULATE,
-                            new appeng.api.networking.security.PlayerSource(player, terminal));
+                        .injectItems(extracted, Actionable.MODULATE, new PlayerSource(player, terminal));
                     sendMessage(player, "ae2_auto_pattern_upload.info.no_empty_upgrade_slot");
                     return null;
                 }
@@ -180,10 +175,7 @@ public class InstallCapacityCardPacket implements IMessage {
                     IAEItemStack remaining = extracted.copy();
                     remaining.setStackSize(extracted.getStackSize() - 1);
                     storageGrid.getItemInventory()
-                        .injectItems(
-                            remaining,
-                            appeng.api.config.Actionable.MODULATE,
-                            new appeng.api.networking.security.PlayerSource(player, terminal));
+                        .injectItems(remaining, Actionable.MODULATE, new PlayerSource(player, terminal));
                 }
 
                 // 保存更改
@@ -340,9 +332,8 @@ public class InstallCapacityCardPacket implements IMessage {
                 }
 
                 int maxCards = 3;
-                if (upgrades instanceof appeng.parts.automation.UpgradeInventory) {
-                    maxCards = ((appeng.parts.automation.UpgradeInventory) upgrades)
-                        .getMaxInstalled(Upgrades.PATTERN_CAPACITY);
+                if (upgrades instanceof UpgradeInventory) {
+                    maxCards = ((UpgradeInventory) upgrades).getMaxInstalled(Upgrades.PATTERN_CAPACITY);
                 }
 
                 return currentCards < maxCards;
@@ -443,19 +434,19 @@ public class InstallCapacityCardPacket implements IMessage {
         private void sendMessage(EntityPlayerMP player, String key) {
             if (player != null && key != null && !key.isEmpty()) {
                 // 使用ChatComponentTranslation让客户端自行翻译
-                player.addChatMessage(new net.minecraft.util.ChatComponentTranslation(key));
+                player.addChatMessage(new ChatComponentTranslation(key));
             }
         }
 
         private void sendMessageWithArgs(EntityPlayerMP player, String key, Object... args) {
             if (player != null && key != null && !key.isEmpty()) {
                 // 使用ChatComponentTranslation让客户端自行翻译，支持参数
-                player.addChatMessage(new net.minecraft.util.ChatComponentTranslation(key, args));
+                player.addChatMessage(new ChatComponentTranslation(key, args));
             }
         }
 
         private String translate(EntityPlayerMP player, String key) {
-            return net.minecraft.util.StatCollector.translateToLocal(key);
+            return StatCollector.translateToLocal(key);
         }
     }
 }
