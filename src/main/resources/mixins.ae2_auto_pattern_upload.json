@@ -19,7 +19,8 @@
     "gt.ToolVajraMixin",
     "jabba.DisableDollyDebuff_Mixin",
     "ph.ItemProgrammingCircuitMixin",
-    "ph.PatternDualInputHatchMixin"
+    "ph.PatternDualInputHatchMixin",
+    "tconstruct.CraftingStationLogicMixin"
   ],
   "client": [
     "ae2.AEBaseGuiMixin",
