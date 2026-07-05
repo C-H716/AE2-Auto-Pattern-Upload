@@ -52,6 +52,10 @@ dependencies {
         "libs/Thaumcraft-1.7.10-4.2.3.5.jar",
         "libs/betterp2p-1.4.3.jar",
         "libs/forgelin-2.0.3-GTNH.jar",
-        "libs/programmablehatches-0.2.0p6-dev.jar"
+        "libs/programmablehatches-0.2.0p6-dev.jar",
+        "libs/visualprospecting-1.5.28.jar"
     )))
+    runtimeOnlyNonPublishable(rfg.deobf(project.files(
+        "libs/journeymap-1.7.10-5.2.18-unlimited.jar",
+        "libs/navigator-1.1.3.jar")))
 }

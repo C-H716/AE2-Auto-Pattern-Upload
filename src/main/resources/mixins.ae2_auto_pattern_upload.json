@@ -30,7 +30,9 @@
     "ae2.ItemRepoMixin",
     "nei.MixinDefaultOverlayHandler",
     "nei.MixinRecipeHandlerRef",
-    "nei.NEIShortcutInputHandlerMixin"
+    "nei.NEIShortcutInputHandlerMixin",
+    "vp.UndergroundFluidLayerManagerMixin",
+    "vp.VeinTypeCachingMixin"
   ],
   "server": [
   ],
