@@ -19,6 +19,9 @@ import codechicken.nei.recipe.Recipe;
 import codechicken.nei.recipe.Recipe.RecipeId;
 import codechicken.nei.recipe.StackInfo;
 
+/**
+ * 为 NEI 书签配方保存功能创建独立分组
+ */
 @Mixin(value = ShortcutInputHandler.class, remap = false)
 public abstract class NEIShortcutInputHandlerMixin {
 
@@ -32,6 +35,7 @@ public abstract class NEIShortcutInputHandlerMixin {
      * @reason 为每个Shift+A收藏的配方创建独立分组
      */
     @Overwrite
+    // 保存书签配方时为每个配方创建独立分组
     private static boolean saveRecipeInBookmark(ItemStack stackover, boolean saveIngredients, boolean saveStackSize) {
         final Point mousePos = GuiDraw.getMousePosition();
 
@@ -42,6 +46,7 @@ public abstract class NEIShortcutInputHandlerMixin {
             // --- Case 1: saving a recipe (with ingredients) ---
             if (recipe != null && saveIngredients) {
                 // 为每个配方生成新的组ID
+                // 生成新的书签分组并返回组标识
                 int groupId = generateNewGroupId();
 
                 // If the recipe is not already bookmarked, add it

@@ -21,9 +21,15 @@ import appeng.me.cluster.implementations.QuantumCluster;
 import appeng.tile.qnb.TileQuantumBridge;
 import appeng.util.Platform;
 
+/**
+ * 为量子链接仓添加潜行空手查看对端量子环坐标的交互
+ */
 @Mixin(value = BlockQuantumLinkChamber.class)
 public class BlockQuantumLinkChamberMixin {
 
+    /**
+     * 在潜行空手右键时拦截激活逻辑，并向玩家发送另一端量子环坐标
+     */
     @Inject(method = "onActivated", at = @At("HEAD"), cancellable = true, remap = false)
     private void onBlockActivated(World w, int x, int y, int z, net.minecraft.entity.player.EntityPlayer p, int side,
         float hitX, float hitY, float hitZ, CallbackInfoReturnable<Boolean> cir) {
@@ -112,7 +118,7 @@ public class BlockQuantumLinkChamberMixin {
         coordText.getChatStyle()
             .setUnderlined(true);
 
-        // 点击传送
+        // 点击坐标后可直接执行传送命令
         coordText.getChatStyle()
             .setChatClickEvent(
                 new ClickEvent(

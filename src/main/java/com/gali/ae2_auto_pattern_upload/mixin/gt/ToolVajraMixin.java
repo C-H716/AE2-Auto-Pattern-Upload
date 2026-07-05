@@ -15,9 +15,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import gregtech.common.tools.ToolVajra;
 
+/**
+ * 在 Vajra 挖掘后自动收集周围掉落物
+ */
 @Mixin(value = ToolVajra.class)
 public class ToolVajraMixin {
 
+    /**
+     * 在方块采集完成后尝试回收周围掉落物
+     */
     @Inject(
         method = "onItemUse",
         at = @At(

@@ -19,7 +19,7 @@ import appeng.api.util.NamedDimensionalCoord;
 import appeng.client.gui.implementations.GuiCraftingCPU;
 
 /**
- * 为GuiCraftingCPU添加的Mixin，实现shift+左键点击打开供应器界面功能
+ * 为 GuiCraftingCPU 添加 shift+左键打开供应器界面的能力
  */
 @Mixin(GuiCraftingCPU.class)
 public abstract class GuiCraftingCPUMixin extends GuiContainer {
@@ -27,13 +27,22 @@ public abstract class GuiCraftingCPUMixin extends GuiContainer {
     @Shadow(remap = false)
     private List<NamedDimensionalCoord> hoveredInterfaceLocations;
 
+    /**
+     * 构造占位父类，满足 Mixin 对 GuiContainer 继承层次的要求
+     */
     public GuiCraftingCPUMixin() {
         super(null);
     }
 
+    /**
+     * 调用原界面的高亮逻辑，保持交互反馈一致
+     */
     @Shadow(remap = false)
     private void highlightHoveredInterfaces() {}
 
+    /**
+     * 在点击供应器提示时发送打开界面的数据包
+     */
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(int xCoord, int yCoord, int btn, CallbackInfo ci) {
         // 只在左键点击且shift按下且有悬停供应器位置时处理

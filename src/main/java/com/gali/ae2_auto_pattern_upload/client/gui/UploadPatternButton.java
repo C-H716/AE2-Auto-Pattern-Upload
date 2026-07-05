@@ -60,8 +60,7 @@ public class UploadPatternButton extends GuiButton implements ITooltip {
     @Override
     public String getMessage() {
         String title = StatCollector.translateToLocal("ae2_auto_pattern_upload.tooltip.upload_pattern");
-        String descKey = isShiftKeyDown()
-            ? "ae2_auto_pattern_upload.tooltip.recall_last_pattern"
+        String descKey = isShiftKeyDown() ? "ae2_auto_pattern_upload.tooltip.recall_last_pattern"
             : "ae2_auto_pattern_upload.tooltip.upload_pattern_desc";
         String desc = StatCollector.translateToLocal(descKey);
         return title + "\n" + desc;

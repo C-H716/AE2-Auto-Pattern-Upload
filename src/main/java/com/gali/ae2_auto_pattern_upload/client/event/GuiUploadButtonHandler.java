@@ -1,18 +1,21 @@
 package com.gali.ae2_auto_pattern_upload.client.event;
 
-import appeng.client.gui.implementations.GuiPatternTerm;
-import com.gali.ae2_auto_pattern_upload.client.gui.UploadPatternButton;
-import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
-import com.gali.ae2_auto_pattern_upload.network.provider.RequestProvidersListPacket;
-import com.gali.ae2_auto_pattern_upload.network.upload.RecallLastUploadedPatternPacket;
-import cpw.mods.fml.common.ObfuscationReflectionHelper;
-import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
+
 import org.lwjgl.input.Keyboard;
+
+import com.gali.ae2_auto_pattern_upload.client.gui.UploadPatternButton;
+import com.gali.ae2_auto_pattern_upload.network.ModNetwork;
+import com.gali.ae2_auto_pattern_upload.network.provider.RequestProvidersListPacket;
+import com.gali.ae2_auto_pattern_upload.network.upload.RecallLastUploadedPatternPacket;
+
+import appeng.client.gui.implementations.GuiPatternTerm;
+import cpw.mods.fml.common.ObfuscationReflectionHelper;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class GuiUploadButtonHandler {
 

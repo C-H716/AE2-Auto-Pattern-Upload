@@ -10,10 +10,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import gregtech.api.util.GTUtility;
 import reobf.proghatches.item.ItemProgrammingCircuit;
 
+/**
+ * 调整编程电路物品名称显示
+ */
 @Mixin(value = ItemProgrammingCircuit.class, remap = false)
 public class ItemProgrammingCircuitMixin {
 
-    @Inject(method = "func_77653_i", at = @At("HEAD"), cancellable = true)
+    /**
+     * 在显示名称时为编程电路补充编号信息
+     */
+    @Inject(method = "getItemStackDisplayName", at = @At("HEAD"), cancellable = true, remap = false)
     private void onGetItemStackDisplayName(ItemStack stack, CallbackInfoReturnable<String> cir) {
         ItemProgrammingCircuit.getCircuit(stack)
             .ifPresent(circuitStack -> {

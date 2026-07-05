@@ -3,6 +3,7 @@ package com.gali.ae2_auto_pattern_upload.mixin.ae2;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraftforge.common.util.Constants.NBT;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -14,19 +15,18 @@ import appeng.api.storage.data.IAEItemStack;
 import appeng.util.PatternMultiplierHelper;
 
 /**
- * Mixin to prevent programming circuits from being multiplied in interface pattern multiplication
+ * 调整样板倍增逻辑，使编程电路不参与接口样板的乘除计算
  */
 @Mixin(value = PatternMultiplierHelper.class, remap = false)
 public abstract class PatternMultiplierHelperMixin {
 
     /**
-     * @author AE2 Auto Pattern Upload
-     * @reason Skip programming circuits when calculating max bit divider
+     * @author C-H716
+     * @reason 计算最大可除位数时跳过编程电路
      */
     @Overwrite
     public static int getMaxBitDivider(ICraftingPatternDetails details) {
-        // limit to 2B per item in pattern
-        int maxDiv = 30;
+        int maxDiv = 62;
         for (IAEItemStack input : details.getInputs()) {
             if (input == null) continue;
 
@@ -37,12 +37,9 @@ public abstract class PatternMultiplierHelperMixin {
             }
 
             long size = input.getStackSize();
-            int max = 0;
-            while ((size & 1) == 0) {
-                size >>= 1;
-                max++;
-            }
-            if (max < maxDiv) maxDiv = max;
+            if (size <= 0) continue;
+            int tz = Math.min(Long.numberOfTrailingZeros(size), 62);
+            if (tz < maxDiv) maxDiv = tz;
         }
         for (IAEItemStack out : details.getOutputs()) {
             if (out == null) continue;
@@ -54,20 +51,17 @@ public abstract class PatternMultiplierHelperMixin {
             }
 
             long size = out.getStackSize();
-            int max = 0;
-            while ((size & 1) == 0) {
-                size >>= 1;
-                max++;
-            }
-            if (max < maxDiv) maxDiv = max;
+            if (size <= 0) continue;
+            int tz = Math.min(Long.numberOfTrailingZeros(size), 62);
+            if (tz < maxDiv) maxDiv = tz;
         }
 
         return maxDiv;
     }
 
     /**
-     * @author AE2 Auto Pattern Upload
-     * @reason Skip programming circuits when applying pattern modifications
+     * @author C-H1716
+     * @reason 应用样板数量修改时跳过编程电路
      */
     @Overwrite
     public static void applyModification(ItemStack stack, int bitMultiplier) {
@@ -82,8 +76,8 @@ public abstract class PatternMultiplierHelperMixin {
         NBTTagCompound encodedValue = stack.stackTagCompound;
         if (encodedValue == null) return;
 
-        final NBTTagList inTag = encodedValue.getTagList("in", 10);
-        final NBTTagList outTag = encodedValue.getTagList("out", 10);
+        final NBTTagList inTag = encodedValue.getTagList("in", NBT.TAG_COMPOUND);
+        final NBTTagList outTag = encodedValue.getTagList("out", NBT.TAG_COMPOUND);
 
         // 处理输入物品
         for (int x = 0; x < inTag.tagCount(); x++) {
@@ -101,8 +95,8 @@ public abstract class PatternMultiplierHelperMixin {
                     "Count",
                     isDividing ? tag.getInteger("Count") >> bitMultiplier : tag.getInteger("Count") << bitMultiplier);
             }
-            // 处理 Cnt 字段 (AE2FC)
-            if (tag.hasKey("Cnt", 4)) {
+            // 处理 Cnt 字段
+            if (tag.hasKey("Cnt", NBT.TAG_LONG)) {
                 tag.setLong(
                     "Cnt",
                     isDividing ? tag.getLong("Cnt") >> bitMultiplier : tag.getLong("Cnt") << bitMultiplier);
@@ -125,8 +119,8 @@ public abstract class PatternMultiplierHelperMixin {
                     "Count",
                     isDividing ? tag.getInteger("Count") >> bitMultiplier : tag.getInteger("Count") << bitMultiplier);
             }
-            // 处理 Cnt 字段 (AE2FC)
-            if (tag.hasKey("Cnt", 4)) {
+            // 处理 Cnt 字段
+            if (tag.hasKey("Cnt", NBT.TAG_LONG)) {
                 tag.setLong(
                     "Cnt",
                     isDividing ? tag.getLong("Cnt") >> bitMultiplier : tag.getLong("Cnt") << bitMultiplier);

@@ -10,12 +10,15 @@ import appeng.api.storage.data.IAEStack;
 import appeng.container.implementations.ContainerPatternTerm;
 import appeng.tile.inventory.IAEStackInventory;
 
+/**
+ * 调整样板终端的批量倍率逻辑，使编程电路不参与乘除判断与修改
+ */
 @Mixin(value = ContainerPatternTerm.class, remap = false)
 public abstract class ContainerPatternTermMixin {
 
     /**
-     * @author AE2 Auto Pattern Upload
-     * @reason Skip programming circuits when checking if multiply/divide is possible
+     * @author C-H716
+     * @reason 检查批量乘除是否可执行时跳过编程电路
      */
     @Overwrite
     static boolean canMultiplyOrDivide(IAEStackInventory inventory, int mult) {
@@ -52,8 +55,8 @@ public abstract class ContainerPatternTermMixin {
     }
 
     /**
-     * @author AE2 Auto Pattern Upload
-     * @reason Skip programming circuits when multiplying/dividing stacks
+     * @author C-H716
+     * @reason 实际执行批量乘除时跳过编程电路
      */
     @Overwrite
     static void multiplyOrDivideStacksInternal(IAEStackInventory inventory, int mult) {

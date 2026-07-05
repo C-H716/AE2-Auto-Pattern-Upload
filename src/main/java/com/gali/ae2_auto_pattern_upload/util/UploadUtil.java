@@ -163,9 +163,8 @@ public class UploadUtil {
             return;
         }
 
-        LAST_UPLOADED_PATTERNS.put(
-            player.getUniqueID(),
-            new LastUploadedPattern(System.identityHashCode(provider), pattern.copy()));
+        LAST_UPLOADED_PATTERNS
+            .put(player.getUniqueID(), new LastUploadedPattern(System.identityHashCode(provider), pattern.copy()));
     }
 
     public static ItemStack takeLastUploadedPattern(EntityPlayer player, IGrid grid) {

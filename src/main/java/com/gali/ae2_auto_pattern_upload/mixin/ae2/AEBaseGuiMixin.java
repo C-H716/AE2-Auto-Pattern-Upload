@@ -13,19 +13,20 @@ import com.gali.ae2_auto_pattern_upload.crafting.CraftingItemsCache;
 import appeng.client.gui.AEBaseGui;
 
 /**
- * Mixin to intercept AE's mouse wheel event handling
- * This prevents AE from handling shift+scroll when our mod wants to handle it
+ * 拦截 AE 终端界面的滚轮事件，避免与本模组的快捷操作冲突
  */
 @Mixin(AEBaseGui.class)
 public abstract class AEBaseGuiMixin extends GuiContainer {
 
+    /**
+     * 构造占位父类，满足 Mixin 对 GuiContainer 继承层次的要求
+     */
     public AEBaseGuiMixin() {
         super(null);
     }
 
     /**
-     * Inject at the end of initGui to reset completed item timers
-     * This ensures players see completed items before the 5-second countdown starts
+     * 在界面初始化结束后重置已完成合成物品的展示计时
      */
     @Inject(method = "initGui", at = @At("TAIL"))
     private void onInitGui(CallbackInfo ci) {
@@ -33,24 +34,20 @@ public abstract class AEBaseGuiMixin extends GuiContainer {
     }
 
     /**
-     * Inject at the beginning of mouseWheelEvent to check if we should cancel AE's handling
-     * If the mouse is over the ME item area, cancel AE's default behavior
+     * 在滚轮事件开始时判断是否取消 AE 原本的 shift+滚轮处理
      */
     @Inject(method = "mouseWheelEvent", at = @At("HEAD"), cancellable = true, remap = false)
     private void onMouseWheelEvent(int x, int y, int wheel, CallbackInfoReturnable<Boolean> cir) {
-        // Check if shift is down (AE only handles shift+scroll)
+        // 只有按住 Shift 时才需要拦截 AE 的滚轮逻辑
         if (!isShiftKeyDown()) {
             return;
         }
 
-        // Check if mouse is in the ME item display area
-        // The item area is typically in the upper portion of the GUI
-        // We'll check if y is above the player inventory area
-        int inventoryStartY = this.guiTop + this.ySize - 90; // Player inventory starts here
+        // 玩家背包区域通常位于界面底部，上方区域视为 ME 物品显示区
+        int inventoryStartY = this.guiTop + this.ySize - 90;
 
         if (y < inventoryStartY) {
-            // Mouse is in the item area, cancel AE's handling
-            // Return true to indicate the event was "handled" (consumed)
+            // 鼠标位于物品显示区时，阻止 AE 默认处理并标记事件已消费
             cir.setReturnValue(true);
             cir.cancel();
         }
